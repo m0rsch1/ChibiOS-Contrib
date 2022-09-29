@@ -91,7 +91,7 @@ MCU  = cortex-m7
 # Imported source files and paths.
 CHIBIOS = ../../../../ChibiOS
 CHIBIOS_CONTRIB = $(CHIBIOS)/../ChibiOS-Contrib
-#CONFDIR  := ./cfg
+CONFDIR  := ./
 BUILDDIR := ./build
 #DEPDIR   := ./.dep
 
