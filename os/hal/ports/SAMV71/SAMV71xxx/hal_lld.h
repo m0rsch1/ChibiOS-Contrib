@@ -43,7 +43,7 @@
  * @name    Platform identification macros
  * @{
  */
-#define PLATFORM_NAME           "templates"
+#define PLATFORM_NAME           "SAMV71xxx"
 /** @} */
 
 /*===========================================================================*/

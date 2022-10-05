@@ -27,6 +27,8 @@
 
 #if (HAL_USE_PAL == TRUE) || defined(__DOXYGEN__)
 
+#include "samv71.h"
+
 /*===========================================================================*/
 /* Unsupported modes and specific modes                                      */
 /*===========================================================================*/
@@ -34,6 +36,50 @@
 /* Specifies palInit() without parameter, required until all platforms will
    be updated to the new style.*/
 #define PAL_NEW_INIT
+
+/*  Enable additional interrupt modes. */
+#define PIO_IT_AIME             (1u << 4)
+/*  Interrupt High Level/Rising Edge detection is active. */
+#define PIO_IT_RE_OR_HL         (1u << 5)
+/*  Interrupt Edge detection is active. */
+#define PIO_IT_EDGE             (1u << 6)
+
+/*  Low level interrupt is active */
+#define PIO_IT_LOW_LEVEL        (0               | 0 | PIO_IT_AIME)
+/*  High level interrupt is active */
+#define PIO_IT_HIGH_LEVEL       (PIO_IT_RE_OR_HL | 0 | PIO_IT_AIME)
+/*  Falling edge interrupt is active */
+#define PIO_IT_FALL_EDGE        (0               | PIO_IT_EDGE | PIO_IT_AIME)
+/*  Rising edge interrupt is active */
+#define PIO_IT_RISE_EDGE        (PIO_IT_RE_OR_HL | PIO_IT_EDGE | PIO_IT_AIME)
+
+/*
+ * The following modes are specific for the SAMV71
+ *
+ * NOTE: The built in modes stop at 7U
+ *
+ * So 0-15U are reserved for the standard modes while the upper 16-31U are reserved for extra modes which can be ORed.
+ */
+
+/* Mark the pad to be controlled by a peripheral */
+#define PAL_MODE_PERIPHERAL_CONTROLLED (1U << 16)
+/* Set the input to be an input with debouncing filter active. Can be ored with PAL_MODE_INPUT* modes */
+#define PAL_MODE_INPUT_DEBOUNCE (1U << 17)
+/* Set the input to be an input with deglitch filter active. Can be ored with PAL_MODE_INPUT* modes */
+#define PAL_MODE_INPUT_DEGLITCH (1U << 18)
+/* Enable the internal pullup resistor. Can be ORed */
+#define PAL_MODE_PULLUP (1U << 19)
+/* Enable the internal pulldown resistor. Can be ORed. For opendrain outputs this will have no effect. */
+#define PAL_MODE_PULLDOWN (1U << 20)
+
+/* Redefine some built in defines */
+#undef PAL_MODE_INPUT_PULLUP
+#define PAL_MODE_INPUT_PULLUP (PAL_MODE_INPUT | PAL_MODE_PULLUP)
+#undef PAL_MODE_INPUT_PULLDOWN
+#define PAL_MODE_INPUT_PULLDOWN (PAL_MODE_INPUT | PAL_MODE_PULLDOWN)
+
+/* Set the pad to be controlled by a peripheral */
+#define PAL_MODE_PERIPHERAL(n) (PAL_MODE_PERIPHERAL_CONTROLLED | n & 0x3U)
 
 /*===========================================================================*/
 /* I/O Ports Types and constants.                                            */
@@ -46,13 +92,13 @@
 /**
  * @brief   Width, in bits, of an I/O port.
  */
-#define PAL_IOPORTS_WIDTH           16U
+#define PAL_IOPORTS_WIDTH           32U
 
 /**
  * @brief   Whole port mask.
  * @details This macro specifies all the valid bits into a port.
  */
-#define PAL_WHOLE_PORT              ((ioportmask_t)0xFFFFU)
+#define PAL_WHOLE_PORT              ((ioportmask_t)0xFFFFFFFFU)
 /** @} */
 
 /**
@@ -65,19 +111,19 @@
  *          of this type is platform-dependent.
  */
 #define PAL_LINE(port, pad)                                                 \
-  ((ioline_t)((uint32_t)(port)) | ((uint32_t)(pad)))
+  ((ioline_t)(((ioline_t)(port) << PAL_IOPORTS_WIDTH) | ((ioline_t)(pad))))
 
 /**
  * @brief   Decodes a port identifier from a line identifier.
  */
 #define PAL_PORT(line)                                                      \
-  ((stm32_gpio_t *)(((uint32_t)(line)) & 0xFFFFFFF0U))
+  ((ioportid_t)((((ioline_t)(line)) >> PAL_IOPORTS_WIDTH) & 0xFFFFFFFFU))
 
 /**
  * @brief   Decodes a pad identifier from a line identifier.
  */
 #define PAL_PAD(line)                                                       \
-  ((uint32_t)((uint32_t)(line) & 0x0000000FU))
+  ((iopadid_t)(((ioline_t)(line)) & 0xFFFFFFFFU))
 
 /**
  * @brief   Value identifying an invalid line.
@@ -111,7 +157,7 @@ typedef uint32_t iomode_t;
 /**
  * @brief   Type of an I/O line.
  */
-typedef uint32_t ioline_t;
+typedef uint64_t ioline_t;
 
 /**
  * @brief   Port Identifier.
@@ -119,7 +165,7 @@ typedef uint32_t ioline_t;
  *          any assumption about it, use the provided macros when populating
  *          variables of this type.
  */
-typedef uint32_t ioportid_t;
+typedef Pio* ioportid_t;
 
 /**
  * @brief   Type of an pad identifier.
@@ -135,7 +181,25 @@ typedef uint32_t iopadid_t;
  * @details Low level drivers can define multiple ports, it is suggested to
  *          use this naming convention.
  */
-#define IOPORT1         0
+#if defined(ID_PIOA)
+#define IOPORT1         PIOA
+#endif
+
+#if defined(ID_PIOB)
+#define IOPORT2         PIOB
+#endif
+
+#if defined(ID_PIOC)
+#define IOPORT3         PIOC
+#endif
+
+#if defined(ID_PIOD)
+#define IOPORT4         PIOD
+#endif
+
+#if defined(ID_PIOE)
+#define IOPORT5         PIOE
+#endif
 
 /*===========================================================================*/
 /* Implementation, some of the following macros could be implemented as      */
@@ -157,7 +221,7 @@ typedef uint32_t iopadid_t;
  *
  * @notapi
  */
-#define pal_lld_readport(port) 0U
+#define pal_lld_readport(port) ((ioportmask_t)port->PIO_PDSR)
 
 /**
  * @brief   Reads the output latch.
@@ -169,7 +233,7 @@ typedef uint32_t iopadid_t;
  *
  * @notapi
  */
-#define pal_lld_readlatch(port) 0U
+#define pal_lld_readlatch(port) ((ioportmask_t)port->PIO_ODSR)
 
 /**
  * @brief   Writes a bits mask on a I/O port.
@@ -179,11 +243,7 @@ typedef uint32_t iopadid_t;
  *
  * @notapi
  */
-#define pal_lld_writeport(port, bits)                                       \
-  do {                                                                      \
-    (void)port;                                                             \
-    (void)bits;                                                             \
-  } while (false)
+#define pal_lld_writeport(port, bits) (port->PIO_ODSR = (ioportmask_t)bits)
 
 /**
  * @brief   Sets a bits mask on a I/O port.
@@ -196,11 +256,7 @@ typedef uint32_t iopadid_t;
  *
  * @notapi
  */
-#define pal_lld_setport(port, bits)                                         \
-  do {                                                                      \
-    (void)port;                                                             \
-    (void)bits;                                                             \
-  } while (false)
+#define pal_lld_setport(port, bits) (port->PIO_SODR = (ioportmask_t)bits)
 
 /**
  * @brief   Clears a bits mask on a I/O port.
@@ -213,65 +269,7 @@ typedef uint32_t iopadid_t;
  *
  * @notapi
  */
-#define pal_lld_clearport(port, bits)                                       \
-  do {                                                                      \
-    (void)port;                                                             \
-    (void)bits;                                                             \
-  } while (false)
-
-/**
- * @brief   Toggles a bits mask on a I/O port.
- * @note    The @ref PAL provides a default software implementation of this
- *          functionality, implement this function if can optimize it by using
- *          special hardware functionalities or special coding.
- *
- * @param[in] port      port identifier
- * @param[in] bits      bits to be XORed on the specified port
- *
- * @notapi
- */
-#define pal_lld_toggleport(port, bits)                                      \
-  do {                                                                      \
-    (void)port;                                                             \
-    (void)bits;                                                             \
-  } while (false)
-
-/**
- * @brief   Reads a group of bits.
- * @note    The @ref PAL provides a default software implementation of this
- *          functionality, implement this function if can optimize it by using
- *          special hardware functionalities or special coding.
- *
- * @param[in] port      port identifier
- * @param[in] mask      group mask
- * @param[in] offset    group bit offset within the port
- * @return              The group logical states.
- *
- * @notapi
- */
-#define pal_lld_readgroup(port, mask, offset) 0U
-
-/**
- * @brief   Writes a group of bits.
- * @note    The @ref PAL provides a default software implementation of this
- *          functionality, implement this function if can optimize it by using
- *          special hardware functionalities or special coding.
- *
- * @param[in] port      port identifier
- * @param[in] mask      group mask
- * @param[in] offset    group bit offset within the port
- * @param[in] bits      bits to be written. Values exceeding the group width
- *                      are masked.
- *
- * @notapi
- */
-#define pal_lld_writegroup(port, mask, offset, bits)                        \
-  do {                                                                      \
-    (void)port;                                                             \
-    (void)mask;                                                             \
-    (void)offset;                                                           \
-    (void)bits;                                                             \
-  } while (false)
+#define pal_lld_clearport(port, bits) (port->PIO_CODR = (ioportmask_t)bits)
 
 /**
  * @brief   Pads group mode setup.
@@ -288,116 +286,6 @@ typedef uint32_t iopadid_t;
  */
 #define pal_lld_setgroupmode(port, mask, offset, mode)                      \
   _pal_lld_setgroupmode(port, mask << offset, mode)
-
-/**
- * @brief   Reads a logical state from an I/O pad.
- * @note    The @ref PAL provides a default software implementation of this
- *          functionality, implement this function if can optimize it by using
- *          special hardware functionalities or special coding.
- *
- * @param[in] port      port identifier
- * @param[in] pad       pad number within the port
- * @return              The logical state.
- * @retval PAL_LOW      low logical state.
- * @retval PAL_HIGH     high logical state.
- *
- * @notapi
- */
-#define pal_lld_readpad(port, pad) PAL_LOW
-
-/**
- * @brief   Writes a logical state on an output pad.
- * @note    This function is not meant to be invoked directly by the
- *          application  code.
- * @note    The @ref PAL provides a default software implementation of this
- *          functionality, implement this function if can optimize it by using
- *          special hardware functionalities or special coding.
- *
- * @param[in] port      port identifier
- * @param[in] pad       pad number within the port
- * @param[in] bit       logical value, the value must be @p PAL_LOW or
- *                      @p PAL_HIGH
- *
- * @notapi
- */
-#define pal_lld_writepad(port, pad, bit)                                    \
-  do {                                                                      \
-    (void)port;                                                             \
-    (void)pad;                                                              \
-    (void)bit;                                                              \
-  } while (false)
-
-/**
- * @brief   Sets a pad logical state to @p PAL_HIGH.
- * @note    The @ref PAL provides a default software implementation of this
- *          functionality, implement this function if can optimize it by using
- *          special hardware functionalities or special coding.
- *
- * @param[in] port      port identifier
- * @param[in] pad       pad number within the port
- *
- * @notapi
- */
-#define pal_lld_setpad(port, pad)                                           \
-  do {                                                                      \
-    (void)port;                                                             \
-    (void)pad;                                                              \
-  } while (false)
-
-/**
- * @brief   Clears a pad logical state to @p PAL_LOW.
- * @note    The @ref PAL provides a default software implementation of this
- *          functionality, implement this function if can optimize it by using
- *          special hardware functionalities or special coding.
- *
- * @param[in] port      port identifier
- * @param[in] pad       pad number within the port
- *
- * @notapi
- */
-#define pal_lld_clearpad(port, pad)                                         \
-  do {                                                                      \
-    (void)port;                                                             \
-    (void)pad;                                                              \
-  } while (false)
-
-/**
- * @brief   Toggles a pad logical state.
- * @note    The @ref PAL provides a default software implementation of this
- *          functionality, implement this function if can optimize it by using
- *          special hardware functionalities or special coding.
- *
- * @param[in] port      port identifier
- * @param[in] pad       pad number within the port
- *
- * @notapi
- */
-#define pal_lld_togglepad(port, pad)                                        \
-  do {                                                                      \
-    (void)port;                                                             \
-    (void)pad;                                                              \
-  } while (false)
-
-/**
- * @brief   Pad mode setup.
- * @details This function programs a pad with the specified mode.
- * @note    The @ref PAL provides a default software implementation of this
- *          functionality, implement this function if can optimize it by using
- *          special hardware functionalities or special coding.
- * @note    Programming an unknown or unsupported mode is silently ignored.
- *
- * @param[in] port      port identifier
- * @param[in] pad       pad number within the port
- * @param[in] mode      pad mode
- *
- * @notapi
- */
-#define pal_lld_setpadmode(port, pad, mode)                                 \
-  do {                                                                      \
-    (void)port;                                                             \
-    (void)pad;                                                              \
-    (void)mode;                                                             \
-  } while (false)
 
 /**
  * @brief   Returns a PAL event structure associated to a pad.
@@ -431,6 +319,9 @@ extern "C" {
 #endif
   void _pal_lld_init(void);
   void _pal_lld_setgroupmode(ioportid_t port,
+                             ioportmask_t mask,
+                             iomode_t mode);
+  void _pal_lld_setgroupPUPD(ioportid_t port,
                              ioportmask_t mask,
                              iomode_t mode);
 #ifdef __cplusplus
