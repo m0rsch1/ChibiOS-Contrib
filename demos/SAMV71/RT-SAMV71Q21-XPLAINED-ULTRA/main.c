@@ -15,9 +15,9 @@ int main(void)
     palClearLine(LINE_LED1);
 
     while(1) {
-        for (volatile uint32_t i = 0; i < 1000000; ++i);
+        chThdSleepMilliseconds(500);
         palSetLine(LINE_LED1);
-        for (volatile uint32_t j = 0; j < 1000000; ++j);
+        chThdSleepMilliseconds(500);
         palClearLine(LINE_LED1);
     }
 }

@@ -71,6 +71,7 @@
  * @details Frequency of the system timer that drives the system ticks. This
  *          setting also defines the system tick time unit.
  */
+// NOTE: This is equal to OSAL_ST_FREQUENCY
 #if !defined(CH_CFG_ST_FREQUENCY)
 #define CH_CFG_ST_FREQUENCY                 10000
 #endif
@@ -137,7 +138,7 @@
  *          infinite loop.
  */
 #if !defined(CH_CFG_NO_IDLE_THREAD)
-#define CH_CFG_NO_IDLE_THREAD               TRUE
+#define CH_CFG_NO_IDLE_THREAD               FALSE
 #endif
 
 /**
@@ -835,6 +836,8 @@
 /*===========================================================================*/
 /* Port-specific settings (override port settings defaulted in chcore.h).    */
 /*===========================================================================*/
+
+#define CORTEX_ENABLE_WFI_IDLE FALSE
 
 #endif  /* CHCONF_H */
 
