@@ -16,8 +16,9 @@ int main(void)
 
     while(1) {
         chThdSleepMilliseconds(500);
-        palSetLine(LINE_LED1);
-        chThdSleepMilliseconds(500);
-        palClearLine(LINE_LED1);
+        palToggleLine(LINE_LED1);
+        //palSetLine(LINE_LED1);
+        //chThdSleepMilliseconds(500);
+        //palClearLine(LINE_LED1);
     }
 }

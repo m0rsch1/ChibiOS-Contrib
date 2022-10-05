@@ -174,6 +174,8 @@ void _pal_lld_setgroupmode(ioportid_t port,
             /* Configure pin(s) as output(s) */
             port->PIO_OER = mask;
             port->PIO_PER = mask;
+            /* TODO: Maybe we need to disable this at one point ... in the future*/
+            port->PIO_OWER = mask;
             break;
         default:
             break;
