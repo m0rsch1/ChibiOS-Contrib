@@ -111,7 +111,7 @@
  *          of this type is platform-dependent.
  */
 #define PAL_LINE(port, pad)                                                 \
-  ((ioline_t)(((ioline_t)(port) << PAL_IOPORTS_WIDTH) | ((ioline_t)(pad))))
+  ((ioline_t)(((ioline_t)((uintptr_t)port) << PAL_IOPORTS_WIDTH) | ((ioline_t)(pad))))
 
 /**
  * @brief   Decodes a port identifier from a line identifier.
