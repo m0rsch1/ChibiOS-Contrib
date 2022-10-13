@@ -9,16 +9,22 @@ int main(void)
     // Initialize ChibiOS
     chSysInit();
 
+    // Setup LEDs
     palSetLineMode(LINE_LED0, PAL_MODE_OUTPUT_PUSHPULL | PAL_MODE_PULLUP);
-    palClearLine(LINE_LED0);
+    palSetLine(LINE_LED0);
     palSetLineMode(LINE_LED1, PAL_MODE_OUTPUT_PUSHPULL | PAL_MODE_PULLUP);
     palClearLine(LINE_LED1);
+
+    // Setup USART0 or SD0 respectively
+    sdStart(&SD0, NULL);
+    if (SD0.state == SD_READY)
+    {
+        palClearLine(LINE_LED0);
+    }
 
     while(1) {
         chThdSleepMilliseconds(500);
         palToggleLine(LINE_LED1);
-        //palSetLine(LINE_LED1);
-        //chThdSleepMilliseconds(500);
-        //palClearLine(LINE_LED1);
+        sdPut(&SD0, 'a');
     }
 }
