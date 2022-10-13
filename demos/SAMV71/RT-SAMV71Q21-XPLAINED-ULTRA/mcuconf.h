@@ -27,4 +27,6 @@
 
 #define PLATFORM_MCUCONF
 
+#define PLATFORM_SERIAL_USE_USART0 TRUE
+
 #endif /* MCUCONF_H */

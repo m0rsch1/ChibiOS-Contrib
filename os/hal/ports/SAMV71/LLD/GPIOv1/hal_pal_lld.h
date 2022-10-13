@@ -79,7 +79,7 @@
 #define PAL_MODE_INPUT_PULLDOWN (PAL_MODE_INPUT | PAL_MODE_PULLDOWN)
 
 /* Set the pad to be controlled by a peripheral */
-#define PAL_MODE_PERIPHERAL(n) (PAL_MODE_PERIPHERAL_CONTROLLED | n & 0x3U)
+#define PAL_MODE_PERIPHERAL(n) (PAL_MODE_PERIPHERAL_CONTROLLED | (n & 0x3U))
 
 /*===========================================================================*/
 /* I/O Ports Types and constants.                                            */

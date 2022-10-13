@@ -53,11 +53,11 @@ SerialDriver SD2;
  * @brief   Driver default configuration.
  */
 static const SerialConfig default_config = {
-  38400,
+  SERIAL_DEFAULT_BITRATE,
   US_MR_CHRL_8_BIT,
   US_MR_PAR_NO,
   US_MR_NBSTOP_1_BIT,
-  US_MR_CHMODE_NORMAL,
+  US_MR_CHMODE_NORMAL | US_MR_USART_MODE_NORMAL | US_MR_USCLKS_MCK,
   0U
 };
 
@@ -65,9 +65,68 @@ static const SerialConfig default_config = {
 /* Driver local functions.                                                   */
 /*===========================================================================*/
 
+#if (PLATFORM_SERIAL_USE_USART0 == TRUE) || defined(__DOXYGEN__)
+static void onotify0(io_queue_t *qp)
+{
+    // This function is called whenever there is something to be sent
+    // Here we should enable the TX interrupt
+    if (!oqIsEmptyI(qp))
+    {
+        SD0.device->US_IER = US_IER_TXRDY | US_IER_TXEMPTY;
+    }
+}
+#endif
+#if (PLATFORM_SERIAL_USE_USART1 == TRUE) || defined(__DOXYGEN__)
+static void onotify1(io_queue_t *qp)
+{
+    // This function is called whenever there is something to be sent
+    // Here we should enable the TX interrupt
+    if (!oqIsEmptyI(qp))
+    {
+        SD1.device->US_IER = US_IER_TXRDY | US_IER_TXEMPTY;
+    }
+}
+#endif
+#if (PLATFORM_SERIAL_USE_USART2 == TRUE) || defined(__DOXYGEN__)
+static void onotify2(io_queue_t *qp)
+{
+    // This function is called whenever there is something to be sent
+    // Here we should enable the TX interrupt
+    if (!oqIsEmptyI(qp))
+    {
+        SD2.device->US_IER = US_IER_TXRDY | US_IER_TXEMPTY;
+    }
+}
+#endif
+
 /*===========================================================================*/
 /* Driver interrupt handlers.                                                */
 /*===========================================================================*/
+
+#if (PLATFORM_SERIAL_USE_USART0 == TRUE) || defined(__DOXYGEN__)
+OSAL_IRQ_HANDLER(USART0_HANDLER)
+{
+    OSAL_IRQ_PROLOGUE();
+    sd_lld_serve_interrupt(&SD0);
+    OSAL_IRQ_EPILOGUE();
+}
+#endif
+#if (PLATFORM_SERIAL_USE_USART1 == TRUE) || defined(__DOXYGEN__)
+OSAL_IRQ_HANDLER(USART1_HANDLER)
+{
+    OSAL_IRQ_PROLOGUE();
+    sd_lld_serve_interrupt(&SD1);
+    OSAL_IRQ_EPILOGUE();
+}
+#endif
+#if (PLATFORM_SERIAL_USE_USART2 == TRUE) || defined(__DOXYGEN__)
+OSAL_IRQ_HANDLER(USART2_HANDLER)
+{
+    OSAL_IRQ_PROLOGUE();
+    sd_lld_serve_interrupt(&SD2);
+    OSAL_IRQ_EPILOGUE();
+}
+#endif
 
 /*===========================================================================*/
 /* Driver exported functions.                                                */
@@ -80,13 +139,19 @@ static const SerialConfig default_config = {
  */
 void sd_lld_init(void) {
 #if PLATFORM_SERIAL_USE_USART0 == TRUE
-  sdObjectInit(&SD0, NULL, notify0);
+  sdObjectInit(&SD0, NULL, onotify0);
+  SD0.device = USART0;
+  SD0.state = SD_STOP;
 #endif
 #if PLATFORM_SERIAL_USE_USART1 == TRUE
-  sdObjectInit(&SD1, NULL, notify1);
+  sdObjectInit(&SD1, NULL, onotify1);
+  SD1.device = USART1;
+  SD1.state = SD_STOP;
 #endif
 #if PLATFORM_SERIAL_USE_USART2 == TRUE
-  sdObjectInit(&SD2, NULL, notify2);
+  sdObjectInit(&SD2, NULL, onotify2);
+  SD2.device = USART2;
+  SD2.state = SD_STOP;
 #endif
 }
 
@@ -109,12 +174,58 @@ void sd_lld_start(SerialDriver *sdp, const SerialConfig *config) {
   if (sdp->state == SD_STOP) {
 #if PLATFORM_SERIAL_USE_USART0 == TRUE
     if (&SD0 == sdp) {
-
+        // Configure pins
+        palSetLineMode(LINE_USART0_RXD, PAL_MODE_PERIPHERAL(2));
+        palSetLineMode(LINE_USART0_TXD, PAL_MODE_PERIPHERAL(2));
+        // Enable interrupt
+        nvicEnableVector(USART0_NVIC_NUMBER, USART_NVIC_PRIORITY);
+        // Enable clock source
+        pmc_enable_periph_clk(ID_USART0);
     }
+#else
+#error "No initialization code present"
 #endif
+    // Configure peripheral
+    // Disable write protection
+    sdp->device->US_WPMR = US_WPMR_WPKEY_PASSWD;
+    // Reset registers
+    sdp->device->US_MR = 0;
+    sdp->device->US_RTOR = 0;
+    sdp->device->US_TTGR = 0;
+    sdp->device->US_CR = US_CR_RSTRX | US_CR_RXDIS | US_CR_RSTTX | US_CR_TXDIS | US_CR_RSTSTA | US_CR_RTSDIS;
+    // Configure registers
+    uint32_t mr = config->char_length | config->parity_type | config->stop_bits | config->channel_mode;
+    sdp->device->US_MR |= mr;
+    // Calculate and set baudrate
+    uint32_t over;
+    uint32_t cd_fp;
+    uint32_t cd;
+    uint32_t fp;
+    /* Calculate the receiver sampling divide of baudrate clock. */
+    if (USART_MAIN_CLOCK >= HIGH_FRQ_SAMPLE_DIV * config->speed) {
+        over = HIGH_FRQ_SAMPLE_DIV;
+    } else {
+        over = LOW_FRQ_SAMPLE_DIV;
+    }
+    /* Calculate clock divider according to the fraction calculated formula. */
+    cd_fp = (8 * USART_MAIN_CLOCK + (over * config->speed) / 2) / (over * config->speed);
+    cd = cd_fp >> 3;
+    fp = cd_fp & 0x07;
+    cd = cd < MIN_CD_VALUE ? MIN_CD_VALUE : cd;
+    cd = cd > MAX_CD_VALUE ? MAX_CD_VALUE : cd;
+    /* Configure the OVER bit in MR register. */
+    if (over == 8) {
+        sdp->device->US_MR |= US_MR_OVER;
+    }
+    /* Configure the baudrate generate register. */
+    sdp->device->US_BRGR = (cd << US_BRGR_CD_Pos) | (fp << US_BRGR_FP_Pos);
+    // Enable TX and RX
+    sdp->device->US_CR = US_CR_RXEN | US_CR_TXEN;
+    // Enable RX interrupts (tx interrupts will be enabled by onotify functions)
+    sdp->device->US_IER = US_IER_RXRDY;
+    // Mark the driver as ready
+    sdp->state = SD_READY;
   }
-  /* Configures the peripheral.*/
-  (void)config; /* Warning suppression, remove this.*/
 }
 
 /**
@@ -142,7 +253,67 @@ void sd_lld_stop(SerialDriver *sdp) {
  */
 void sd_lld_serve_interrupt(SerialDriver *sdp)
 {
-    (void)sdp;
+    Usart* dev = sdp->device;
+
+    /* Read and clear status*/
+    uint32_t status = dev->US_CSR;
+    // NOTE: Clearing the status will not affect TXRDY, RXRDY and TXEMPTY
+    dev->US_CR = US_CR_RSTSTA;
+
+    // TODO: Handle error conditions (e.g. parity etc)
+
+    /* Handle received data */
+    while (status & US_CSR_RXRDY)
+    {
+        // Read in the received character
+        // NOTE: Reading from RHR automatically clears RXRDY unless another character is received
+        osalSysLockFromISR();
+        sdIncomingDataI(sdp, dev->US_RHR);
+        osalSysUnlockFromISR();
+
+        // Reread status
+        status = dev->US_CSR;
+    }
+
+    /* Handle data transmission */
+    if (dev->US_IMR & US_IMR_TXRDY)
+    {
+        // When TXRDY interrupt has been enabled we read all characters we can from queue and transmit them
+        while (status & US_CSR_TXRDY)
+        {
+            msg_t b;
+
+            osalSysLockFromISR();
+            b = oqGetI(&sdp->oqueue);
+            if (b < MSG_OK)
+            {
+                // Nothing to send anymore, so disable TXRDY interrupts
+                dev->US_IDR = US_IDR_TXRDY;
+                chnAddFlagsI(sdp, CHN_OUTPUT_EMPTY);
+                osalSysUnlockFromISR();
+                break;
+            }
+            // Transmit data
+            // NOTE: The TXRDY is automatically cleared once we write to it
+            dev->US_THR = b;
+            osalSysUnlockFromISR();
+
+            // Reread status
+            status = dev->US_CSR;
+        }
+    }
+
+    /* Handle end of transmission */
+    if ((dev->US_IMR & US_IMR_TXEMPTY) && (status & US_CSR_TXEMPTY))
+    {
+        osalSysLockFromISR();
+        if (oqIsEmptyI(&sdp->oqueue)) {
+            // Nothing to send anymore, so disable TXEMPTY interrupt
+            dev->US_IDR = US_IDR_TXEMPTY;
+            chnAddFlagsI(sdp, CHN_TRANSMISSION_END);
+        }
+        osalSysUnlockFromISR();
+    }
 }
 
 #endif /* HAL_USE_SERIAL == TRUE */

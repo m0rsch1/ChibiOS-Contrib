@@ -28,12 +28,32 @@
 #if (HAL_USE_SERIAL == TRUE) || defined(__DOXYGEN__)
 
 #include "samv71.h"
+#include "hal_pmc_lld.h"
+#include "hal_st_lld.h"
 
 /*===========================================================================*/
 /* Driver constants.                                                         */
 /*===========================================================================*/
 
 #define USART_MAIN_CLOCK (CHIP_FREQ_CPU_MAX / 2)
+#define USART_NVIC_PRIORITY 6
+
+/* The CD value scope programmed in MR register. */
+#define MIN_CD_VALUE                  0x01
+#define MAX_CD_VALUE                  US_BRGR_CD_Msk
+
+/* The receiver sampling divide of baudrate clock. */
+#define HIGH_FRQ_SAMPLE_DIV           16
+#define LOW_FRQ_SAMPLE_DIV            8
+
+#if defined(__SAMV71Q21B__)
+#define USART0_NVIC_NUMBER USART0_IRQn
+#define USART0_HANDLER Vector74
+#define USART1_NVIC_NUMBER USART1_IRQn
+#define USART1_HANDLER Vector78
+#define USART2_NVIC_NUMBER USART2_IRQn
+#define USART2_HANDLER Vector7C
+#endif
 
 /*===========================================================================*/
 /* Driver pre-compile time settings.                                         */
@@ -63,6 +83,10 @@
 /*===========================================================================*/
 /* Derived constants and error checks.                                       */
 /*===========================================================================*/
+
+#if (USART_NVIC_PRIORITY < ST_NVIC_PRIORITY)
+#warning "Setting USART prio higher than systick prio might cause problems"
+#endif
 
 #if PLATFORM_SERIAL_USE_USART0 && !defined(ID_USART0)
 #error "USART0 is not present on this device"

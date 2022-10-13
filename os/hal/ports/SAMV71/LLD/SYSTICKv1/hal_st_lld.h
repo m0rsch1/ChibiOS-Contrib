@@ -33,6 +33,11 @@
 /* Driver constants.                                                         */
 /*===========================================================================*/
 
+#define ST_HANDLER SysTick_Handler
+#define ST_NVIC_PRIORITY                    2
+
+#define SYSTICK_CK                          (CHIP_FREQ_CPU_MAX / 2)
+
 /*===========================================================================*/
 /* Driver pre-compile time settings.                                         */
 /*===========================================================================*/
@@ -40,6 +45,14 @@
 /*===========================================================================*/
 /* Derived constants and error checks.                                       */
 /*===========================================================================*/
+
+#if SYSTICK_CK % OSAL_ST_FREQUENCY != 0
+#error "the selected ST frequency is not obtainable because integer rounding"
+#endif
+
+#if (SYSTICK_CK / OSAL_ST_FREQUENCY) - 1 > 0xFFFFFF
+#error "the selected ST frequency is not obtainable because SysTick timer counter limits"
+#endif
 
 /*===========================================================================*/
 /* Driver data structures and types.                                         */
