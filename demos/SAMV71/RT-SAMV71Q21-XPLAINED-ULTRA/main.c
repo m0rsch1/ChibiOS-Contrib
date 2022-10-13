@@ -23,8 +23,8 @@ int main(void)
     }
 
     while(1) {
-        chThdSleepMilliseconds(500);
         palToggleLine(LINE_LED1);
-        sdPut(&SD0, 'a');
+        msg_t b = sdGet(&SD0);
+        sdPut(&SD0, b);
     }
 }
