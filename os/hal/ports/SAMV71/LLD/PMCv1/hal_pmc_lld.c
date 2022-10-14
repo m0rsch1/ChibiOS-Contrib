@@ -38,3 +38,30 @@ uint32_t pmc_enable_periph_clk(uint32_t ul_id)
 #endif /* defined(REG_PMC_PCR) */
 }
 
+uint32_t pmc_disable_periph_clk(uint32_t ul_id)
+{
+#if defined(REG_PMC_PCR)
+        uint32_t pcr;
+        PMC->PMC_PCR = ul_id & 0x7F;
+        pcr = PMC->PMC_PCR | PMC_PCR_CMD;
+        PMC->PMC_PCR = pcr;
+        return 0;
+#else
+        if (ul_id > MAX_PERIPH_ID) {
+                return 1;
+        }
+
+        if (ul_id < 32) {
+                if ((PMC->PMC_PCSR0 & (1u << ul_id)) == (1u << ul_id)) {
+                        PMC->PMC_PCDR0 = 1 << ul_id;
+                }
+        } else {
+                ul_id -= 32;
+                if ((PMC->PMC_PCSR1 & (1u << ul_id)) == (1u << ul_id)) {
+                        PMC->PMC_PCDR1 = 1 << ul_id;
+                }
+        }
+
+        return 0;
+#endif /* defined(REG_PMC_PCR) */
+}

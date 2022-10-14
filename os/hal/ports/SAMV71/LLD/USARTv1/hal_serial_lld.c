@@ -240,11 +240,17 @@ void sd_lld_start(SerialDriver *sdp, const SerialConfig *config) {
 void sd_lld_stop(SerialDriver *sdp) {
 
   if (sdp->state == SD_READY) {
+      // Disable all enabled interrupts
+      sdp->device->US_IDR = sdp->device->US_IMR;
 #if PLATFORM_SERIAL_USE_USART0 == TRUE
     if (&SD0 == sdp) {
-
+        // Stop the clock
+        pmc_disable_periph_clk(ID_USART0);
+        // Disable interrupt vector
+        nvicDisableVector(USART0_NVIC_NUMBER);
     }
 #endif
+    sdp->state = SD_STOP;
   }
 }
 
