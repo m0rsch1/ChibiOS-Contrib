@@ -101,9 +101,8 @@ include $(CHIBIOS)/os/license/license.mk
 include $(CHIBIOS_CONTRIB)/os/common/startup/ARMCMx/compilers/GCC/mk/startup_samv71xxx.mk
 # HAL-OSAL files (optional).
 include $(CHIBIOS)/os/hal/hal.mk
-# TODO: Implement HAL for the SAMV71Q21B and the SAMV71_XPLAINED_ULTRA board
 include $(CHIBIOS_CONTRIB)/os/hal/ports/SAMV71/SAMV71xxx/platform.mk
-include ./board.mk
+include $(CHIBIOS_CONTRIB)/os/hal/boards/SAMV71_XPLAINED_ULTRA/board.mk
 #include $(CHIBIOS)/os/hal/boards/ST_STM32F746G_DISCOVERY/board.mk
 include $(CHIBIOS)/os/hal/osal/rt-nil/osal.mk
 # RTOS files (optional).
@@ -123,7 +122,6 @@ LDSCRIPT= $(STARTUPLD_CONTRIB)/SAMV71Q21.ld
 # setting.
 CSRC = $(ALLCSRC) \
        $(TESTSRC) \
-       system_samv71.c \
        main.c
 
 # C++ sources that can be compiled in ARM or THUMB mode depending on the global
