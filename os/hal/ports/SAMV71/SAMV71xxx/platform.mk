@@ -28,6 +28,7 @@ include $(CHIBIOS_CONTRIB)/os/hal/ports/SAMV71/LLD/SYSTICKv1/driver.mk
 include $(CHIBIOS_CONTRIB)/os/hal/ports/SAMV71/LLD/PMCv1/driver.mk
 include $(CHIBIOS_CONTRIB)/os/hal/ports/SAMV71/LLD/GPIOv1/driver.mk
 include $(CHIBIOS_CONTRIB)/os/hal/ports/SAMV71/LLD/USARTv1/driver.mk
+include $(CHIBIOS_CONTRIB)/os/hal/ports/SAMV71/LLD/GPTv1/driver.mk
 
 # Shared variables
 ALLCSRC += $(PLATFORMSRC)
