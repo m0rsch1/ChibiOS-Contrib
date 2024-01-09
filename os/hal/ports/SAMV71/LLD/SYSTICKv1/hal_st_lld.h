@@ -16,7 +16,7 @@
 
 /**
  * @file    hal_st_lld.h
- * @brief   PLATFORM ST subsystem low level driver header.
+ * @brief   SAMV71 ST subsystem low level driver header.
  * @details This header is designed to be include-able without having to
  *          include other files from the HAL.
  *
@@ -33,8 +33,10 @@
 /* Driver constants.                                                         */
 /*===========================================================================*/
 
+// *_NVIC_PRIORITY must be greater or equal CORTEX_MAX_KERNEL_PRIORITY so
+// osal functions can be used in the handler.
 #define ST_HANDLER SysTick_Handler
-#define ST_NVIC_PRIORITY                    2
+#define ST_NVIC_PRIORITY                    CORTEX_MAX_KERNEL_PRIORITY+1
 
 #define SYSTICK_CK                          (CHIP_FREQ_CPU_MAX / 2)
 
