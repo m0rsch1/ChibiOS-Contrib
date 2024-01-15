@@ -179,8 +179,22 @@ void sd_lld_start(SerialDriver *sdp, const SerialConfig *config) {
         // Enable clock source
         pmc_enable_periph_clk(ID_USART0);
     }
-#else
-#error "No initialization code present"
+#endif
+#if SAMV71_SERIAL_USE_USART1 == TRUE
+    if (&SD1 == sdp) {
+        // Enable interrupt
+        nvicEnableVector(USART1_NVIC_NUMBER, USART_NVIC_PRIORITY);
+        // Enable clock source
+        pmc_enable_periph_clk(ID_USART1);
+    }
+#endif
+#if SAMV71_SERIAL_USE_USART2 == TRUE
+    if (&SD2 == sdp) {
+        // Enable interrupt
+        nvicEnableVector(USART2_NVIC_NUMBER, USART_NVIC_PRIORITY);
+        // Enable clock source
+        pmc_enable_periph_clk(ID_USART2);
+    }
 #endif
     // Configure peripheral
     // Disable write protection
@@ -245,6 +259,22 @@ void sd_lld_stop(SerialDriver *sdp) {
         pmc_disable_periph_clk(ID_USART0);
         // Disable interrupt vector
         nvicDisableVector(USART0_NVIC_NUMBER);
+    }
+#endif
+#if SAMV71_SERIAL_USE_USART1 == TRUE
+    if (&SD1 == sdp) {
+        // Stop the clock
+        pmc_disable_periph_clk(ID_USART1);
+        // Disable interrupt vector
+        nvicDisableVector(USART1_NVIC_NUMBER);
+    }
+#endif
+#if SAMV71_SERIAL_USE_USART2 == TRUE
+    if (&SD2 == sdp) {
+        // Stop the clock
+        pmc_disable_periph_clk(ID_USART2);
+        // Disable interrupt vector
+        nvicDisableVector(USART2_NVIC_NUMBER);
     }
 #endif
     sdp->state = SD_STOP;
