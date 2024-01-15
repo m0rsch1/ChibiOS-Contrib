@@ -36,7 +36,7 @@
 /*===========================================================================*/
 
 #define USART_MAIN_CLOCK (SystemCoreClock / 2)
-#define USART_NVIC_PRIORITY 6
+#define USART_NVIC_PRIORITY CORTEX_MIN_KERNEL_PRIORITY-1
 
 /* The CD value scope programmed in MR register. */
 #define MIN_CD_VALUE                  0x01
@@ -86,6 +86,10 @@
 
 #if (USART_NVIC_PRIORITY < ST_NVIC_PRIORITY)
 #warning "Setting USART prio higher than systick prio might cause problems"
+#endif
+
+#if !OSAL_IRQ_IS_VALID_PRIORITY(USART_NVIC_PRIORITY)
+#error "Invalid USART interrupt priority"
 #endif
 
 #if SAMV71_SERIAL_USE_USART0 && !defined(ID_USART0)

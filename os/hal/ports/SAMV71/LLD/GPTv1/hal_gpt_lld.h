@@ -35,8 +35,8 @@
 
 #define GPT_MAIN_CLK (SystemCoreClock / 2)
 
-// NOTE: USART has 6, SYSTICK has 2
-#define GPT_NVIC_PRIORITY 4
+// NOTE: USART has CORTEX_MIN_KERNEL_PRIORITY-1, SYSTICK has CORTEX_MAX_KERNEL_PRIORITY+1
+#define GPT_NVIC_PRIORITY CORTEX_MIN_KERNEL_PRIORITY-2
 #define TC0_HANDLER Vector9C
 #define TC0_NVIC_NUMBER TC0_IRQn
 
@@ -64,6 +64,10 @@
 
 #if (GPT_NVIC_PRIORITY < ST_NVIC_PRIORITY)
 #warning "Setting GPT prio higher than systick prio might cause problems"
+#endif
+
+#if !OSAL_IRQ_IS_VALID_PRIORITY(GPT_NVIC_PRIORITY)
+#error "Invalid GPT interrupt priority"
 #endif
 
 #if SAMV71_GPT_USE_GPT0 && !defined(ID_TC0)

@@ -56,6 +56,10 @@
 #error "the selected ST frequency is not obtainable because SysTick timer counter limits"
 #endif
 
+#if !OSAL_IRQ_IS_VALID_PRIORITY(ST_NVIC_PRIORITY)
+#error "Invalid SYSTICK interrupt priority"
+#endif
+
 /*===========================================================================*/
 /* Driver data structures and types.                                         */
 /*===========================================================================*/
