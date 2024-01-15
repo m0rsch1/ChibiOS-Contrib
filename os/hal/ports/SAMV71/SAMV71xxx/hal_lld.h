@@ -43,7 +43,7 @@
  * @name    Platform identification macros
  * @{
  */
-#define PLATFORM_NAME           "SAMV71xxx"
+#define SAMV71_NAME           "SAMV71xxx"
 /** @} */
 
 /*===========================================================================*/
@@ -63,8 +63,8 @@
 /*
  * Configuration-related checks.
  */
-#if !defined(PLATFORM_MCUCONF)
-#error "Using a wrong mcuconf.h file, PLATFORM_MCUCONF not defined"
+#if !defined(SAMV71_MCUCONF)
+#error "Using a wrong mcuconf.h file, SAMV71_MCUCONF not defined"
 #endif
 
 /*===========================================================================*/

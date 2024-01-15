@@ -16,7 +16,7 @@
 
 /**
  * @file    hal_gpt_lld.h
- * @brief   PLATFORM GPT subsystem low level driver header.
+ * @brief   SAMV71 GPT subsystem low level driver header.
  *
  * @addtogroup GPT
  * @{
@@ -45,7 +45,7 @@
 /*===========================================================================*/
 
 /**
- * @name    PLATFORM configuration options
+ * @name    SAMV71 configuration options
  * @{
  */
 /**
@@ -53,8 +53,8 @@
  * @details If set to @p TRUE the support for GPTD0 is included.
  * @note    The default is @p FALSE.
  */
-#if !defined(PLATFORM_GPT_USE_GPT0) || defined(__DOXYGEN__)
-#define PLATFORM_GPT_USE_GPT0               FALSE
+#if !defined(SAMV71_GPT_USE_GPT0) || defined(__DOXYGEN__)
+#define SAMV71_GPT_USE_GPT0               FALSE
 #endif
 /** @} */
 
@@ -66,7 +66,7 @@
 #warning "Setting GPT prio higher than systick prio might cause problems"
 #endif
 
-#if PLATFORM_GPT_USE_GPT0 && !defined(ID_TC0)
+#if SAMV71_GPT_USE_GPT0 && !defined(ID_TC0)
 #error "GPT0 is not present on this device"
 #endif
 
@@ -152,7 +152,7 @@ struct GPTDriver {
 /* External declarations.                                                    */
 /*===========================================================================*/
 
-#if (PLATFORM_GPT_USE_GPT0 == TRUE) && !defined(__DOXYGEN__)
+#if (SAMV71_GPT_USE_GPT0 == TRUE) && !defined(__DOXYGEN__)
 extern GPTDriver GPTD0;
 #endif
 

@@ -346,7 +346,7 @@ void XDMAC_Handler      ( void );
 #define __DTCM_PRESENT         1      /**< SAMV71Q21B does provide a Data TCM           */
 #define __ITCM_PRESENT         1      /**< SAMV71Q21B does provide an Instruction TCM   */
 #define __Vendor_SysTickConfig 0      /**< Set to 1 if different SysTick Config is used */
-#define __SAM_M7_REVB		   1	  /**< SAMV71Q21 Revision B */
+#define __SAM_M7_REVB          1      /**< SAMV71Q21 Revision B */
 
 /*
  * \brief CMSIS includes

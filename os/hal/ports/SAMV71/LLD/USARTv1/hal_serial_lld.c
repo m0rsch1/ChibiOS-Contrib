@@ -35,13 +35,13 @@
 /*===========================================================================*/
 
 /** @brief USART1 serial driver identifier.*/
-#if (PLATFORM_SERIAL_USE_USART0 == TRUE) || defined(__DOXYGEN__)
+#if (SAMV71_SERIAL_USE_USART0 == TRUE) || defined(__DOXYGEN__)
 SerialDriver SD0;
 #endif
-#if (PLATFORM_SERIAL_USE_USART1 == TRUE) || defined(__DOXYGEN__)
+#if (SAMV71_SERIAL_USE_USART1 == TRUE) || defined(__DOXYGEN__)
 SerialDriver SD1;
 #endif
-#if (PLATFORM_SERIAL_USE_USART2 == TRUE) || defined(__DOXYGEN__)
+#if (SAMV71_SERIAL_USE_USART2 == TRUE) || defined(__DOXYGEN__)
 SerialDriver SD2;
 #endif
 
@@ -65,7 +65,7 @@ static const SerialConfig default_config = {
 /* Driver local functions.                                                   */
 /*===========================================================================*/
 
-#if (PLATFORM_SERIAL_USE_USART0 == TRUE) || defined(__DOXYGEN__)
+#if (SAMV71_SERIAL_USE_USART0 == TRUE) || defined(__DOXYGEN__)
 static void onotify0(io_queue_t *qp)
 {
     // This function is called whenever there is something to be sent
@@ -76,7 +76,7 @@ static void onotify0(io_queue_t *qp)
     }
 }
 #endif
-#if (PLATFORM_SERIAL_USE_USART1 == TRUE) || defined(__DOXYGEN__)
+#if (SAMV71_SERIAL_USE_USART1 == TRUE) || defined(__DOXYGEN__)
 static void onotify1(io_queue_t *qp)
 {
     // This function is called whenever there is something to be sent
@@ -87,7 +87,7 @@ static void onotify1(io_queue_t *qp)
     }
 }
 #endif
-#if (PLATFORM_SERIAL_USE_USART2 == TRUE) || defined(__DOXYGEN__)
+#if (SAMV71_SERIAL_USE_USART2 == TRUE) || defined(__DOXYGEN__)
 static void onotify2(io_queue_t *qp)
 {
     // This function is called whenever there is something to be sent
@@ -103,7 +103,7 @@ static void onotify2(io_queue_t *qp)
 /* Driver interrupt handlers.                                                */
 /*===========================================================================*/
 
-#if (PLATFORM_SERIAL_USE_USART0 == TRUE) || defined(__DOXYGEN__)
+#if (SAMV71_SERIAL_USE_USART0 == TRUE) || defined(__DOXYGEN__)
 OSAL_IRQ_HANDLER(USART0_HANDLER)
 {
     OSAL_IRQ_PROLOGUE();
@@ -111,7 +111,7 @@ OSAL_IRQ_HANDLER(USART0_HANDLER)
     OSAL_IRQ_EPILOGUE();
 }
 #endif
-#if (PLATFORM_SERIAL_USE_USART1 == TRUE) || defined(__DOXYGEN__)
+#if (SAMV71_SERIAL_USE_USART1 == TRUE) || defined(__DOXYGEN__)
 OSAL_IRQ_HANDLER(USART1_HANDLER)
 {
     OSAL_IRQ_PROLOGUE();
@@ -119,7 +119,7 @@ OSAL_IRQ_HANDLER(USART1_HANDLER)
     OSAL_IRQ_EPILOGUE();
 }
 #endif
-#if (PLATFORM_SERIAL_USE_USART2 == TRUE) || defined(__DOXYGEN__)
+#if (SAMV71_SERIAL_USE_USART2 == TRUE) || defined(__DOXYGEN__)
 OSAL_IRQ_HANDLER(USART2_HANDLER)
 {
     OSAL_IRQ_PROLOGUE();
@@ -138,17 +138,17 @@ OSAL_IRQ_HANDLER(USART2_HANDLER)
  * @notapi
  */
 void sd_lld_init(void) {
-#if PLATFORM_SERIAL_USE_USART0 == TRUE
+#if SAMV71_SERIAL_USE_USART0 == TRUE
   sdObjectInit(&SD0, NULL, onotify0);
   SD0.device = USART0;
   SD0.state = SD_STOP;
 #endif
-#if PLATFORM_SERIAL_USE_USART1 == TRUE
+#if SAMV71_SERIAL_USE_USART1 == TRUE
   sdObjectInit(&SD1, NULL, onotify1);
   SD1.device = USART1;
   SD1.state = SD_STOP;
 #endif
-#if PLATFORM_SERIAL_USE_USART2 == TRUE
+#if SAMV71_SERIAL_USE_USART2 == TRUE
   sdObjectInit(&SD2, NULL, onotify2);
   SD2.device = USART2;
   SD2.state = SD_STOP;
@@ -172,7 +172,7 @@ void sd_lld_start(SerialDriver *sdp, const SerialConfig *config) {
   }
 
   if (sdp->state == SD_STOP) {
-#if PLATFORM_SERIAL_USE_USART0 == TRUE
+#if SAMV71_SERIAL_USE_USART0 == TRUE
     if (&SD0 == sdp) {
         // Configure pins
         palSetLineMode(LINE_USART0_RXD, PAL_MODE_PERIPHERAL(2));
@@ -242,7 +242,7 @@ void sd_lld_stop(SerialDriver *sdp) {
   if (sdp->state == SD_READY) {
       // Disable all enabled interrupts
       sdp->device->US_IDR = sdp->device->US_IMR;
-#if PLATFORM_SERIAL_USE_USART0 == TRUE
+#if SAMV71_SERIAL_USE_USART0 == TRUE
     if (&SD0 == sdp) {
         // Stop the clock
         pmc_disable_periph_clk(ID_USART0);

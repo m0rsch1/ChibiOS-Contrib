@@ -37,7 +37,7 @@
 /**
  * @brief   GPTD0 driver identifier.
  */
-#if (PLATFORM_GPT_USE_GPT0 == TRUE) || defined(__DOXYGEN__)
+#if (SAMV71_GPT_USE_GPT0 == TRUE) || defined(__DOXYGEN__)
 GPTDriver GPTD0;
 #endif
 
@@ -53,7 +53,7 @@ GPTDriver GPTD0;
 /* Driver interrupt handlers.                                                */
 /*===========================================================================*/
 
-#if PLATFORM_GPT_USE_GPT0
+#if SAMV71_GPT_USE_GPT0
 /**
  * @brief   TC0 IRQ Handler
  *
@@ -91,7 +91,7 @@ void gpt_lld_serve_interrupt(GPTDriver *gptp)
  */
 void gpt_lld_init(void) {
 
-#if PLATFORM_GPT_USE_GPT0 == TRUE
+#if SAMV71_GPT_USE_GPT0 == TRUE
   /* Driver initialization.*/
   gptObjectInit(&GPTD0);
   GPTD0.driver = TC0;
@@ -110,7 +110,7 @@ void gpt_lld_start(GPTDriver *gptp) {
 
   if (gptp->state == GPT_STOP) {
     /* Enables the peripheral.*/
-#if PLATFORM_GPT_USE_GPT0 == TRUE
+#if SAMV71_GPT_USE_GPT0 == TRUE
     if (&GPTD0 == gptp) {
         // First enable the clock of the timer
         pmc_enable_periph_clk(ID_TC0);
@@ -159,7 +159,7 @@ void gpt_lld_stop(GPTDriver *gptp) {
     /* Resets the peripheral.*/
 
     /* Disables the peripheral.*/
-#if PLATFORM_GPT_USE_GPT0 == TRUE
+#if SAMV71_GPT_USE_GPT0 == TRUE
     if (&GPTD0 == gptp) {
         // Disable write protection
         gptp->driver->TC_WPMR = TC_WPMR_WPKEY_PASSWD;

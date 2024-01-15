@@ -16,7 +16,7 @@
 
 /**
  * @file    hal_serial_lld.h
- * @brief   PLATFORM serial subsystem low level driver header.
+ * @brief   SAMV71 serial subsystem low level driver header.
  *
  * @addtogroup SERIAL
  * @{
@@ -60,7 +60,7 @@
 /*===========================================================================*/
 
 /**
- * @name    PLATFORM configuration options
+ * @name    SAMV71 configuration options
  * @{
  */
 /**
@@ -68,14 +68,14 @@
  * @details If set to @p TRUE the support for USART1 is included.
  * @note    The default is @p FALSE.
  */
-#if !defined(PLATFORM_SERIAL_USE_USART0) || defined(__DOXYGEN__)
-#define PLATFORM_SERIAL_USE_USART0             FALSE
+#if !defined(SAMV71_SERIAL_USE_USART0) || defined(__DOXYGEN__)
+#define SAMV71_SERIAL_USE_USART0             FALSE
 #endif
-#if !defined(PLATFORM_SERIAL_USE_USART1) || defined(__DOXYGEN__)
-#define PLATFORM_SERIAL_USE_USART1             FALSE
+#if !defined(SAMV71_SERIAL_USE_USART1) || defined(__DOXYGEN__)
+#define SAMV71_SERIAL_USE_USART1             FALSE
 #endif
-#if !defined(PLATFORM_SERIAL_USE_USART2) || defined(__DOXYGEN__)
-#define PLATFORM_SERIAL_USE_USART2             FALSE
+#if !defined(SAMV71_SERIAL_USE_USART2) || defined(__DOXYGEN__)
+#define SAMV71_SERIAL_USE_USART2             FALSE
 #endif
 /* TODO: We also have UARTs!!!! */
 /** @} */
@@ -88,13 +88,13 @@
 #warning "Setting USART prio higher than systick prio might cause problems"
 #endif
 
-#if PLATFORM_SERIAL_USE_USART0 && !defined(ID_USART0)
+#if SAMV71_SERIAL_USE_USART0 && !defined(ID_USART0)
 #error "USART0 is not present on this device"
 #endif
-#if PLATFORM_SERIAL_USE_USART1 && !defined(ID_USART1)
+#if SAMV71_SERIAL_USE_USART1 && !defined(ID_USART1)
 #error "USART1 is not present on this device"
 #endif
-#if PLATFORM_SERIAL_USE_USART2 && !defined(ID_USART2)
+#if SAMV71_SERIAL_USE_USART2 && !defined(ID_USART2)
 #error "USART2 is not present on this device"
 #endif
 
@@ -103,7 +103,7 @@
 /*===========================================================================*/
 
 /**
- * @brief   PLATFORM Serial Driver configuration structure.
+ * @brief   SAMV71 Serial Driver configuration structure.
  * @details An instance of this structure must be passed to @p sdStart()
  *          in order to configure and start a serial driver operations.
  * @note    This structure content is architecture dependent, each driver
@@ -176,13 +176,13 @@ typedef struct hal_serial_config {
 /* External declarations.                                                    */
 /*===========================================================================*/
 
-#if (PLATFORM_SERIAL_USE_USART0 == TRUE) && !defined(__DOXYGEN__)
+#if (SAMV71_SERIAL_USE_USART0 == TRUE) && !defined(__DOXYGEN__)
 extern SerialDriver SD0;
 #endif
-#if (PLATFORM_SERIAL_USE_USART1 == TRUE) && !defined(__DOXYGEN__)
+#if (SAMV71_SERIAL_USE_USART1 == TRUE) && !defined(__DOXYGEN__)
 extern SerialDriver SD1;
 #endif
-#if (PLATFORM_SERIAL_USE_USART2 == TRUE) && !defined(__DOXYGEN__)
+#if (SAMV71_SERIAL_USE_USART2 == TRUE) && !defined(__DOXYGEN__)
 extern SerialDriver SD2;
 #endif
 

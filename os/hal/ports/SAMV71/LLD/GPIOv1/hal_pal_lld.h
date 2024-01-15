@@ -16,7 +16,7 @@
 
 /**
  * @file    hal_pal_lld.h
- * @brief   PLATFORM PAL subsystem low level driver header.
+ * @brief   SAMV71 PAL subsystem low level driver header.
  *
  * @addtogroup PAL
  * @{
