@@ -76,7 +76,6 @@
 extern "C" {
 #endif
   void st_lld_init(void);
-  void st_lld_serve_interrupt(void);
 #ifdef __cplusplus
 }
 #endif

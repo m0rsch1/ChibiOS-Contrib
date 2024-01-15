@@ -46,6 +46,15 @@
 /* Driver local functions.                                                   */
 /*===========================================================================*/
 
+/**
+ * @brief   IRQ handling code.
+ */
+static void st_lld_serve_interrupt(void) {
+    osalSysLockFromISR();
+    osalOsTimerHandlerI();
+    osalSysUnlockFromISR();
+}
+
 /*===========================================================================*/
 /* Driver interrupt handlers.                                                */
 /*===========================================================================*/
@@ -89,15 +98,6 @@ void st_lld_init(void) {
 #else
 #error "hal_st_lld.c of SAMV71 does not yet support tickless mode"
 #endif
-}
-
-/**
- * @brief   IRQ handling code.
- */
-void st_lld_serve_interrupt(void) {
-    osalSysLockFromISR();
-    osalOsTimerHandlerI();
-    osalSysUnlockFromISR();
 }
 
 
