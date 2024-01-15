@@ -117,7 +117,7 @@
  * @brief   Decodes a port identifier from a line identifier.
  */
 #define PAL_PORT(line)                                                      \
-  ((ioportid_t)((((ioline_t)(line)) >> PAL_IOPORTS_WIDTH) & 0xFFFFFFFFU))
+  ((ioportid_t)((uintptr_t)((((ioline_t)(line)) >> PAL_IOPORTS_WIDTH) & 0xFFFFFFFFU)))
 
 /**
  * @brief   Decodes a pad identifier from a line identifier.
@@ -221,7 +221,7 @@ typedef uint32_t iopadid_t;
  *
  * @notapi
  */
-#define pal_lld_readport(port) ((ioportmask_t)port->PIO_PDSR)
+#define pal_lld_readport(port) ((ioportmask_t)((port)->PIO_PDSR))
 
 /**
  * @brief   Reads the output latch.
