@@ -174,9 +174,6 @@ void sd_lld_start(SerialDriver *sdp, const SerialConfig *config) {
   if (sdp->state == SD_STOP) {
 #if SAMV71_SERIAL_USE_USART0 == TRUE
     if (&SD0 == sdp) {
-        // Configure pins
-        palSetLineMode(LINE_USART0_RXD, PAL_MODE_PERIPHERAL(2));
-        palSetLineMode(LINE_USART0_TXD, PAL_MODE_PERIPHERAL(2));
         // Enable interrupt
         nvicEnableVector(USART0_NVIC_NUMBER, USART_NVIC_PRIORITY);
         // Enable clock source
