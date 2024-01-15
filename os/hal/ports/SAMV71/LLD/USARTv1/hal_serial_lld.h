@@ -35,7 +35,7 @@
 /* Driver constants.                                                         */
 /*===========================================================================*/
 
-#define USART_MAIN_CLOCK (CHIP_FREQ_CPU_MAX / 2)
+#define USART_MAIN_CLOCK (SystemCoreClock / 2)
 #define USART_NVIC_PRIORITY 6
 
 /* The CD value scope programmed in MR register. */

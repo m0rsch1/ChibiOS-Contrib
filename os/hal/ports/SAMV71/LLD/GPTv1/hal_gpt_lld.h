@@ -33,7 +33,7 @@
 /* Driver constants.                                                         */
 /*===========================================================================*/
 
-#define GPT_MAIN_CLK (CHIP_FREQ_CPU_MAX / 2)
+#define GPT_MAIN_CLK (SystemCoreClock / 2)
 
 // NOTE: USART has 6, SYSTICK has 2
 #define GPT_NVIC_PRIORITY 4
