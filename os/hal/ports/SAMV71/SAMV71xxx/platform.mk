@@ -1,6 +1,7 @@
 # Required source files
 PLATFORMSRC := ${CHIBIOS}/os/hal/ports/common/ARMCMx/nvic.c \
 	       ${CHIBIOS_CONTRIB}/os/hal/ports/SAMV71/SAMV71xxx/hal_lld.c \
+	       ${CHIBIOS_CONTRIB}/os/hal/ports/SAMV71/SAMV71xxx/hal_matrix_lld.c \
 
 # Required include directories
 PLATFORMINC = ${CHIBIOS}/os/hal/ports/common/ARMCMx \
