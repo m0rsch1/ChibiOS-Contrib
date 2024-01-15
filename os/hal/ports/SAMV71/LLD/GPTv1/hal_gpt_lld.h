@@ -39,6 +39,14 @@
 #define GPT_NVIC_PRIORITY CORTEX_MIN_KERNEL_PRIORITY-2
 #define TC0_HANDLER Vector9C
 #define TC0_NVIC_NUMBER TC0_IRQn
+#define TC1_HANDLER VectorA0
+#define TC1_NVIC_NUMBER TC1_IRQn
+#define TC2_HANDLER VectorA4
+#define TC2_NVIC_NUMBER TC2_IRQn
+#define TC3_HANDLER VectorA8
+#define TC3_NVIC_NUMBER TC3_IRQn
+#define TC4_HANDLER VectorAC
+#define TC4_NVIC_NUMBER TC4_IRQn
 
 /*===========================================================================*/
 /* Driver pre-compile time settings.                                         */
@@ -56,6 +64,42 @@
 #if !defined(SAMV71_GPT_USE_GPT0) || defined(__DOXYGEN__)
 #define SAMV71_GPT_USE_GPT0               FALSE
 #endif
+
+/**
+ * @brief   GPTD1 driver enable switch.
+ * @details If set to @p TRUE the support for GPTD1 is included.
+ * @note    The default is @p FALSE.
+ */
+#if !defined(SAMV71_GPT_USE_GPT1) || defined(__DOXYGEN__)
+#define SAMV71_GPT_USE_GPT1               FALSE
+#endif
+
+/**
+ * @brief   GPTD2 driver enable switch.
+ * @details If set to @p TRUE the support for GPTD2 is included.
+ * @note    The default is @p FALSE.
+ */
+#if !defined(SAMV71_GPT_USE_GPT2) || defined(__DOXYGEN__)
+#define SAMV71_GPT_USE_GPT2               FALSE
+#endif
+
+/**
+ * @brief   GPTD3 driver enable switch.
+ * @details If set to @p TRUE the support for GPTD3 is included.
+ * @note    The default is @p FALSE.
+ */
+#if !defined(SAMV71_GPT_USE_GPT3) || defined(__DOXYGEN__)
+#define SAMV71_GPT_USE_GPT3               FALSE
+#endif
+
+/**
+ * @brief   GPTD4 driver enable switch.
+ * @details If set to @p TRUE the support for GPTD4 is included.
+ * @note    The default is @p FALSE.
+ */
+#if !defined(SAMV71_GPT_USE_GPT4) || defined(__DOXYGEN__)
+#define SAMV71_GPT_USE_GPT4               FALSE
+#endif
 /** @} */
 
 /*===========================================================================*/
@@ -72,6 +116,18 @@
 
 #if SAMV71_GPT_USE_GPT0 && !defined(ID_TC0)
 #error "GPT0 is not present on this device"
+#endif
+#if SAMV71_GPT_USE_GPT1 && !defined(ID_TC1)
+#error "GPT1 is not present on this device"
+#endif
+#if SAMV71_GPT_USE_GPT2 && !defined(ID_TC2)
+#error "GPT2 is not present on this device"
+#endif
+#if SAMV71_GPT_USE_GPT3 && !defined(ID_TC3)
+#error "GPT3 is not present on this device"
+#endif
+#if SAMV71_GPT_USE_GPT4 && !defined(ID_TC4)
+#error "GPT4 is not present on this device"
 #endif
 
 /*===========================================================================*/
@@ -158,6 +214,18 @@ struct GPTDriver {
 
 #if (SAMV71_GPT_USE_GPT0 == TRUE) && !defined(__DOXYGEN__)
 extern GPTDriver GPTD0;
+#endif
+#if (SAMV71_GPT_USE_GPT1 == TRUE) && !defined(__DOXYGEN__)
+extern GPTDriver GPTD1;
+#endif
+#if (SAMV71_GPT_USE_GPT2 == TRUE) && !defined(__DOXYGEN__)
+extern GPTDriver GPTD2;
+#endif
+#if (SAMV71_GPT_USE_GPT3 == TRUE) && !defined(__DOXYGEN__)
+extern GPTDriver GPTD3;
+#endif
+#if (SAMV71_GPT_USE_GPT4 == TRUE) && !defined(__DOXYGEN__)
+extern GPTDriver GPTD4;
 #endif
 
 #ifdef __cplusplus

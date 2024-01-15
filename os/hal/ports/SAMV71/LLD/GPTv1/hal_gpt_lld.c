@@ -40,6 +40,18 @@
 #if (SAMV71_GPT_USE_GPT0 == TRUE) || defined(__DOXYGEN__)
 GPTDriver GPTD0;
 #endif
+#if (SAMV71_GPT_USE_GPT1 == TRUE) || defined(__DOXYGEN__)
+GPTDriver GPTD1;
+#endif
+#if (SAMV71_GPT_USE_GPT2 == TRUE) || defined(__DOXYGEN__)
+GPTDriver GPTD2;
+#endif
+#if (SAMV71_GPT_USE_GPT3 == TRUE) || defined(__DOXYGEN__)
+GPTDriver GPTD3;
+#endif
+#if (SAMV71_GPT_USE_GPT4 == TRUE) || defined(__DOXYGEN__)
+GPTDriver GPTD4;
+#endif
 
 /*===========================================================================*/
 /* Driver local variables and types.                                         */
@@ -64,6 +76,66 @@ OSAL_IRQ_HANDLER(TC0_HANDLER) {
   OSAL_IRQ_PROLOGUE();
 
   gpt_lld_serve_interrupt(&GPTD0);
+
+  OSAL_IRQ_EPILOGUE();
+}
+#endif
+#if SAMV71_GPT_USE_GPT1
+/**
+ * @brief   TC1 IRQ Handler
+ *
+ * @isr
+ */
+OSAL_IRQ_HANDLER(TC1_HANDLER) {
+
+  OSAL_IRQ_PROLOGUE();
+
+  gpt_lld_serve_interrupt(&GPTD1);
+
+  OSAL_IRQ_EPILOGUE();
+}
+#endif
+#if SAMV71_GPT_USE_GPT2
+/**
+ * @brief   TC2 IRQ Handler
+ *
+ * @isr
+ */
+OSAL_IRQ_HANDLER(TC2_HANDLER) {
+
+  OSAL_IRQ_PROLOGUE();
+
+  gpt_lld_serve_interrupt(&GPTD2);
+
+  OSAL_IRQ_EPILOGUE();
+}
+#endif
+#if SAMV71_GPT_USE_GPT3
+/**
+ * @brief   TC3 IRQ Handler
+ *
+ * @isr
+ */
+OSAL_IRQ_HANDLER(TC3_HANDLER) {
+
+  OSAL_IRQ_PROLOGUE();
+
+  gpt_lld_serve_interrupt(&GPTD3);
+
+  OSAL_IRQ_EPILOGUE();
+}
+#endif
+#if SAMV71_GPT_USE_GPT4
+/**
+ * @brief   TC4 IRQ Handler
+ *
+ * @isr
+ */
+OSAL_IRQ_HANDLER(TC4_HANDLER) {
+
+  OSAL_IRQ_PROLOGUE();
+
+  gpt_lld_serve_interrupt(&GPTD4);
 
   OSAL_IRQ_EPILOGUE();
 }
@@ -97,6 +169,30 @@ void gpt_lld_init(void) {
   GPTD0.driver = TC0;
   gpt_lld_stop_timer(&GPTD0);
 #endif
+#if SAMV71_GPT_USE_GPT1 == TRUE
+  /* Driver initialization.*/
+  gptObjectInit(&GPTD1);
+  GPTD1.driver = TC1;
+  gpt_lld_stop_timer(&GPTD1);
+#endif
+#if SAMV71_GPT_USE_GPT2 == TRUE
+  /* Driver initialization.*/
+  gptObjectInit(&GPTD2);
+  GPTD2.driver = TC2;
+  gpt_lld_stop_timer(&GPTD2);
+#endif
+#if SAMV71_GPT_USE_GPT3 == TRUE
+  /* Driver initialization.*/
+  gptObjectInit(&GPTD3);
+  GPTD3.driver = TC3;
+  gpt_lld_stop_timer(&GPTD3);
+#endif
+#if SAMV71_GPT_USE_GPT4 == TRUE
+  /* Driver initialization.*/
+  gptObjectInit(&GPTD4);
+  GPTD4.driver = TC4;
+  gpt_lld_stop_timer(&GPTD4);
+#endif
 }
 
 /**
@@ -116,33 +212,65 @@ void gpt_lld_start(GPTDriver *gptp) {
         pmc_enable_periph_clk(ID_TC0);
         // Enable the NVIC
         nvicEnableVector(TC0_NVIC_NUMBER, GPT_NVIC_PRIORITY);
-        // Disable write protection
-        gptp->driver->TC_WPMR = TC_WPMR_WPKEY_PASSWD;
-        // Given the requested frequency and the different clock options, we should derive the best clock to use for the timer
-        int selected_divisor = 0;
-        const uint32_t divisors[] = {2, 8, 32, 128};
-        for (int i = 0; i < 4; i++)
-        {
-            // Select the current divisor
-            selected_divisor = i;
-            // Calculate boundaries of frequencies
-            const uint32_t hf = GPT_MAIN_CLK / divisors[i];
-            const uint32_t lf = hf / 65535;
-            if ((gptp->config->frequency < hf) && (gptp->config->frequency > lf))
-                break;
-        }
-        // Set CMR to zero first
-        gptp->driver->TC_CHANNEL[gptp->channel].TC_CMR = 0;
-        // Set the clock divisor (by index not by value)
-        gptp->driver->TC_CHANNEL[gptp->channel].TC_CMR |= selected_divisor;
-        // Set the timer to use reset the counter on RC compare
-        gptp->driver->TC_CHANNEL[gptp->channel].TC_CMR |= TC_CMR_CPCTRG;
-        
-        // NOTE: IRQs are enabled when the timer is started
+    }
+#endif
+#if SAMV71_GPT_USE_GPT1 == TRUE
+    if (&GPTD1 == gptp) {
+        // First enable the clock of the timer
+        pmc_enable_periph_clk(ID_TC1);
+        // Enable the NVIC
+        nvicEnableVector(TC1_NVIC_NUMBER, GPT_NVIC_PRIORITY);
+    }
+#endif
+#if SAMV71_GPT_USE_GPT2 == TRUE
+    if (&GPTD2 == gptp) {
+        // First enable the clock of the timer
+        pmc_enable_periph_clk(ID_TC2);
+        // Enable the NVIC
+        nvicEnableVector(TC2_NVIC_NUMBER, GPT_NVIC_PRIORITY);
+    }
+#endif
+#if SAMV71_GPT_USE_GPT3 == TRUE
+    if (&GPTD3 == gptp) {
+        // First enable the clock of the timer
+        pmc_enable_periph_clk(ID_TC3);
+        // Enable the NVIC
+        nvicEnableVector(TC3_NVIC_NUMBER, GPT_NVIC_PRIORITY);
+    }
+#endif
+#if SAMV71_GPT_USE_GPT4 == TRUE
+    if (&GPTD4 == gptp) {
+        // First enable the clock of the timer
+        pmc_enable_periph_clk(ID_TC4);
+        // Enable the NVIC
+        nvicEnableVector(TC4_NVIC_NUMBER, GPT_NVIC_PRIORITY);
     }
 #endif
   }
   /* Configures the peripheral.*/
+  // Disable write protection
+  gptp->driver->TC_WPMR = TC_WPMR_WPKEY_PASSWD;
+  // Given the requested frequency and the different clock options, we should derive the best clock to use for the timer
+  int selected_divisor = 0;
+  const uint32_t divisors[] = {2, 8, 32, 128};
+  for (int i = 0; i < 4; i++)
+  {
+      // Select the current divisor
+      selected_divisor = i;
+      // Calculate boundaries of frequencies
+      const uint32_t hf = GPT_MAIN_CLK / divisors[i];
+      const uint32_t lf = hf / 65535;
+      if ((gptp->config->frequency < hf) && (gptp->config->frequency > lf))
+          break;
+  }
+  // Set CMR to zero first
+  gptp->driver->TC_CHANNEL[gptp->channel].TC_CMR = 0;
+  // Set the clock divisor (by index not by value)
+  gptp->driver->TC_CHANNEL[gptp->channel].TC_CMR |= selected_divisor;
+  // Set the timer to use reset the counter on RC compare
+  gptp->driver->TC_CHANNEL[gptp->channel].TC_CMR |= TC_CMR_CPCTRG;
+
+  // NOTE: IRQs are enabled when the timer is started
 
 }
 
@@ -158,22 +286,54 @@ void gpt_lld_stop(GPTDriver *gptp) {
   if (gptp->state == GPT_READY) {
     /* Resets the peripheral.*/
 
+    // Disable write protection
+    gptp->driver->TC_WPMR = TC_WPMR_WPKEY_PASSWD;
+    // Disable interrupts and reset the status register
+    /*  Disable TC clock. */
+    gptp->driver->TC_CHANNEL[gptp->channel].TC_CCR = TC_CCR_CLKDIS;
+    /*  Disable interrupts. */
+    gptp->driver->TC_CHANNEL[gptp->channel].TC_IDR = 0xFFFFFFFF;
+    /*  Clear status register. */
+    gptp->driver->TC_CHANNEL[gptp->channel].TC_SR;
     /* Disables the peripheral.*/
 #if SAMV71_GPT_USE_GPT0 == TRUE
     if (&GPTD0 == gptp) {
-        // Disable write protection
-        gptp->driver->TC_WPMR = TC_WPMR_WPKEY_PASSWD;
-        // Disable interrupts and reset the status register
-        /*  Disable TC clock. */
-        gptp->driver->TC_CHANNEL[gptp->channel].TC_CCR = TC_CCR_CLKDIS;
-        /*  Disable interrupts. */
-        gptp->driver->TC_CHANNEL[gptp->channel].TC_IDR = 0xFFFFFFFF;
-        /*  Clear status register. */
-        gptp->driver->TC_CHANNEL[gptp->channel].TC_SR;
         // Disable the NVIC
         nvicDisableVector(TC0_NVIC_NUMBER);
         // Disable the clock of the timer
         pmc_disable_periph_clk(ID_TC0);
+    }
+#endif
+#if SAMV71_GPT_USE_GPT1 == TRUE
+    if (&GPTD1 == gptp) {
+        // Disable the NVIC
+        nvicDisableVector(TC1_NVIC_NUMBER);
+        // Disable the clock of the timer
+        pmc_disable_periph_clk(ID_TC1);
+    }
+#endif
+#if SAMV71_GPT_USE_GPT2 == TRUE
+    if (&GPTD2 == gptp) {
+        // Disable the NVIC
+        nvicDisableVector(TC2_NVIC_NUMBER);
+        // Disable the clock of the timer
+        pmc_disable_periph_clk(ID_TC2);
+    }
+#endif
+#if SAMV71_GPT_USE_GPT3 == TRUE
+    if (&GPTD3 == gptp) {
+        // Disable the NVIC
+        nvicDisableVector(TC3_NVIC_NUMBER);
+        // Disable the clock of the timer
+        pmc_disable_periph_clk(ID_TC3);
+    }
+#endif
+#if SAMV71_GPT_USE_GPT4 == TRUE
+    if (&GPTD4 == gptp) {
+        // Disable the NVIC
+        nvicDisableVector(TC4_NVIC_NUMBER);
+        // Disable the clock of the timer
+        pmc_disable_periph_clk(ID_TC4);
     }
 #endif
   }
