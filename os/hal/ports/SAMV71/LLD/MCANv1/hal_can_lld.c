@@ -1055,6 +1055,7 @@ bool can_lld_is_rx_nonempty(CANDriver *canp, canmbx_t mailbox) {
     osalDbgAssert ( mailbox != CAN_RX_MAILBOX_FIFO1 || canp->config->rxfifo1_count > 0,
                     "Queued mailbox not configured" );
     osalDbgAssert ( mailbox < CAN_RX_MAILBOX_BUFFER0 || mailbox == CAN_ANY_MAILBOX ||
+                    mailbox == CAN_RX_MAILBOX_TXEVENT ||
                     mailbox < ((canmbx_t)canp->config->rxbuffer_count) + CAN_RX_MAILBOX_BUFFER0,
                     "Mailbox not configured" );
 
@@ -1120,6 +1121,7 @@ void can_lld_receive(CANDriver *canp,
     osalDbgAssert ( mailbox != CAN_RX_MAILBOX_FIFO1 || canp->config->rxfifo1_count > 0,
                     "Queued mailbox not configured" );
     osalDbgAssert ( mailbox < CAN_RX_MAILBOX_BUFFER0 || mailbox == CAN_ANY_MAILBOX ||
+                    mailbox == CAN_RX_MAILBOX_TXEVENT ||
                     mailbox < ((canmbx_t)canp->config->rxbuffer_count) + CAN_RX_MAILBOX_BUFFER0,
                     "Mailbox not configured" );
 
