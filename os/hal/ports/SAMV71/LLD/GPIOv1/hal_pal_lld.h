@@ -37,21 +37,14 @@
    be updated to the new style.*/
 #define PAL_NEW_INIT
 
-/*  Enable additional interrupt modes. */
-#define PIO_IT_AIME             (1u << 4)
-/*  Interrupt High Level/Rising Edge detection is active. */
-#define PIO_IT_RE_OR_HL         (1u << 5)
-/*  Interrupt Edge detection is active. */
-#define PIO_IT_EDGE             (1u << 6)
-
-/*  Low level interrupt is active */
-#define PIO_IT_LOW_LEVEL        (0               | 0 | PIO_IT_AIME)
-/*  High level interrupt is active */
-#define PIO_IT_HIGH_LEVEL       (PIO_IT_RE_OR_HL | 0 | PIO_IT_AIME)
-/*  Falling edge interrupt is active */
-#define PIO_IT_FALL_EDGE        (0               | PIO_IT_EDGE | PIO_IT_AIME)
-/*  Rising edge interrupt is active */
-#define PIO_IT_RISE_EDGE        (PIO_IT_RE_OR_HL | PIO_IT_EDGE | PIO_IT_AIME)
+/**
+ * @name    Additional PAL event modes
+ * @{
+ */
+#define PAL_EVENT_MODE_LEVEL_MASK   4U  /**< @brief Mask for level select  */
+#define PAL_EVENT_MODE_HIGH_LEVEL   5U  /**< @brief High level callback.  */
+#define PAL_EVENT_MODE_LOW_LEVEL    6U  /**< @brief Low level callback.   */
+/** @} */
 
 /*
  * The following modes are specific for the SAMV71
@@ -81,6 +74,32 @@
 /* Set the pad to be controlled by a peripheral */
 #define PAL_MODE_PERIPHERAL(n) (PAL_MODE_PERIPHERAL_CONTROLLED | (n & 0x3U))
 
+#define PAL_PERIPHERAL_A 0
+#define PAL_PERIPHERAL_B 1
+#define PAL_PERIPHERAL_C 2
+#define PAL_PERIPHERAL_D 3
+
+#ifdef ID_PIOA
+#define PIOA_NVIC_NUMBER PIOA_IRQn
+#define PIOA_HANDLER Vector68
+#endif
+#ifdef ID_PIOB
+#define PIOB_NVIC_NUMBER PIOB_IRQn
+#define PIOB_HANDLER Vector6C
+#endif
+#ifdef ID_PIOC
+#define PIOC_NVIC_NUMBER PIOC_IRQn
+#define PIOC_HANDLER Vector70
+#endif
+#ifdef ID_PIOD
+#define PIOD_NVIC_NUMBER PIOD_IRQn
+#define PIOD_HANDLER Vector80
+#endif
+#ifdef ID_PIOE
+#define PIOE_NVIC_NUMBER PIOE_IRQn
+#define PIOE_HANDLER Vector84
+#endif
+
 /*===========================================================================*/
 /* I/O Ports Types and constants.                                            */
 /*===========================================================================*/
@@ -109,27 +128,48 @@
  * @brief   Forms a line identifier.
  * @details A port/pad pair are encoded into an @p ioline_t type. The encoding
  *          of this type is platform-dependent.
+ * @note    In this driver the pad number is encoded in the lower 5 bits of
+ *          the GPIO address which are guaranteed to be zero.
  */
 #define PAL_LINE(port, pad)                                                 \
-  ((ioline_t)(((ioline_t)((uintptr_t)port) << PAL_IOPORTS_WIDTH) | ((ioline_t)(pad))))
+  ((ioline_t)(((ioline_t)((uintptr_t)port)) | ((ioline_t)(pad))))
 
 /**
  * @brief   Decodes a port identifier from a line identifier.
  */
 #define PAL_PORT(line)                                                      \
-  ((ioportid_t)((uintptr_t)((((ioline_t)(line)) >> PAL_IOPORTS_WIDTH) & 0xFFFFFFFFU)))
+  ((ioportid_t)((uintptr_t)((((ioline_t)(line))) & 0xFFFFFFE0U)))
 
 /**
  * @brief   Decodes a pad identifier from a line identifier.
  */
 #define PAL_PAD(line)                                                       \
-  ((iopadid_t)(((ioline_t)(line)) & 0xFFFFFFFFU))
+  ((iopadid_t)(((ioline_t)(line)) & 0x1FU))
 
 /**
  * @brief   Value identifying an invalid line.
  */
 #define PAL_NOLINE                      0U
 /** @} */
+
+#if defined(ID_PIOE)
+#define PAL_PORTNO(port) (((port) == PIOE)?4:    \
+                          ((port) == PIOD)?3:    \
+                          ((port) == PIOC)?2:    \
+                          ((port) == PIOB)?1:0)
+#elif defined(ID_PIOD)
+#define PAL_PORTNO(port) (((port) == PIOD)?3:    \
+                          ((port) == PIOC)?2:    \
+                          ((port) == PIOB)?1:0)
+#elif defined(ID_PIOC)
+#define PAL_PORTNO(port) (((port) == PIOC)?2:    \
+                          ((port) == PIOB)?1:0)
+#elif defined(ID_PIOB)
+#define PAL_PORTNO(port) (((port) == PIOB)?1:0)
+#else
+#define PAL_PORTNO(port) 0
+#endif
+
 
 /**
  * @brief   Generic I/O ports static initializer.
@@ -157,10 +197,15 @@ typedef uint32_t iomode_t;
 /**
  * @brief   Type of an I/O line.
  */
-typedef uint64_t ioline_t;
+typedef uint32_t ioline_t;
 
 /**
- * @brief   Port Identifier.
+ * @brief   Type of an event mode.
+ */
+typedef uint32_t ioeventmode_t;
+
+/**
+ * @brief   Type of a port Identifier.
  * @details This type can be a scalar or some kind of pointer, do not make
  *          any assumption about it, use the provided macros when populating
  *          variables of this type.
@@ -168,7 +213,7 @@ typedef uint64_t ioline_t;
 typedef Pio* ioportid_t;
 
 /**
- * @brief   Type of an pad identifier.
+ * @brief   Type of a pad identifier.
  */
 typedef uint32_t iopadid_t;
 
@@ -233,7 +278,7 @@ typedef uint32_t iopadid_t;
  *
  * @notapi
  */
-#define pal_lld_readlatch(port) ((ioportmask_t)port->PIO_ODSR)
+#define pal_lld_readlatch(port) ((ioportmask_t)(port)->PIO_ODSR)
 
 /**
  * @brief   Writes a bits mask on a I/O port.
@@ -243,7 +288,7 @@ typedef uint32_t iopadid_t;
  *
  * @notapi
  */
-#define pal_lld_writeport(port, bits) (port->PIO_ODSR = (ioportmask_t)bits)
+#define pal_lld_writeport(port, bits) ((port)->PIO_ODSR = (ioportmask_t)(bits))
 
 /**
  * @brief   Sets a bits mask on a I/O port.
@@ -256,7 +301,7 @@ typedef uint32_t iopadid_t;
  *
  * @notapi
  */
-#define pal_lld_setport(port, bits) (port->PIO_SODR = (ioportmask_t)bits)
+#define pal_lld_setport(port, bits) ((port)->PIO_SODR = (ioportmask_t)(bits))
 
 /**
  * @brief   Clears a bits mask on a I/O port.
@@ -269,7 +314,7 @@ typedef uint32_t iopadid_t;
  *
  * @notapi
  */
-#define pal_lld_clearport(port, bits) (port->PIO_CODR = (ioportmask_t)bits)
+#define pal_lld_clearport(port, bits) ((port)->PIO_CODR = (ioportmask_t)(bits))
 
 /**
  * @brief   Pads group mode setup.
@@ -285,7 +330,32 @@ typedef uint32_t iopadid_t;
  * @notapi
  */
 #define pal_lld_setgroupmode(port, mask, offset, mode)                      \
-  _pal_lld_setgroupmode(port, mask << offset, mode)
+  _pal_lld_setgroupmode((port), (mask) << (offset), (mode))
+
+/**
+ * @brief   Pad event enable.
+ * @note    Programming an unknown or unsupported mode is silently ignored.
+ *
+ * @param[in] port      port identifier
+ * @param[in] pad       pad number within the port
+ * @param[in] mode      pad event mode
+ *
+ * @notapi
+ */
+#define pal_lld_enablepadevent(port, pad, mode)                             \
+  _pal_lld_enablepadevent(port, pad, mode)
+
+/**
+ * @brief   Pad event disable.
+ * @details This function disables previously programmed event callbacks.
+ *
+ * @param[in] port      port identifier
+ * @param[in] pad       pad number within the port
+ *
+ * @notapi
+ */
+#define pal_lld_disablepadevent(port, pad)                                  \
+  _pal_lld_disablepadevent(port, pad)
 
 /**
  * @brief   Returns a PAL event structure associated to a pad.
@@ -296,7 +366,7 @@ typedef uint32_t iopadid_t;
  * @notapi
  */
 #define pal_lld_get_pad_event(port, pad)                                    \
-  &_pal_events[0]; (void)(port); (void)pad
+  &_pal_events[PAL_PORTNO(port)*32 + pad]
 
 /**
  * @brief   Returns a PAL event structure associated to a line.
@@ -306,11 +376,23 @@ typedef uint32_t iopadid_t;
  * @notapi
  */
 #define pal_lld_get_line_event(line)                                        \
-  &_pal_events[0]; (void)line
+  pal_lld_get_pad_event(PAL_PORT(line), PAL_PAD(line))
 
 #if !defined(__DOXYGEN__)
 #if (PAL_USE_WAIT == TRUE) || (PAL_USE_CALLBACKS == TRUE)
+#if defined(ID_PIOE)
+extern palevent_t _pal_events[32*5];
+#elif defined(ID_PIOD)
+extern palevent_t _pal_events[32*4];
+#elif defined(ID_PIOC)
+extern palevent_t _pal_events[32*3];
+#elif defined(ID_PIOB)
+extern palevent_t _pal_events[32*2];
+#elif defined(ID_PIOA)
+extern palevent_t _pal_events[32*1];
+#else
 extern palevent_t _pal_events[1];
+#endif
 #endif
 #endif
 
@@ -324,6 +406,10 @@ extern "C" {
   void _pal_lld_setgroupPUPD(ioportid_t port,
                              ioportmask_t mask,
                              iomode_t mode);
+  void _pal_lld_enablepadevent(ioportid_t port,
+                               iopadid_t pad,
+                               ioeventmode_t mode);
+  void _pal_lld_disablepadevent(ioportid_t port, iopadid_t pad);
 #ifdef __cplusplus
 }
 #endif
