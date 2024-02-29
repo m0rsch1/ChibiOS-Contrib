@@ -36,11 +36,13 @@
 /*===========================================================================*/
 
 #define USART_MAIN_CLOCK (SystemCoreClock / 2)
+#define USART_PCLK_CLOCK (ProgrammableClock[4] / 2)
 #define USART_NVIC_PRIORITY CORTEX_MIN_KERNEL_PRIORITY-1
 
 /* The CD value scope programmed in MR register. */
 #define MIN_CD_VALUE                  0x01
-#define MAX_CD_VALUE                  US_BRGR_CD_Msk
+#define MAX_USART_CD_VALUE            US_BRGR_CD_Msk
+#define MAX_UART_CD_VALUE            UART_BRGR_CD_Msk
 
 /* The receiver sampling divide of baudrate clock. */
 #define HIGH_FRQ_SAMPLE_DIV           16
@@ -53,6 +55,17 @@
 #define USART1_HANDLER Vector78
 #define USART2_NVIC_NUMBER USART2_IRQn
 #define USART2_HANDLER Vector7C
+
+#define UART0_NVIC_NUMBER UART0_IRQn
+#define UART0_HANDLER Vector5C
+#define UART1_NVIC_NUMBER UART1_IRQn
+#define UART1_HANDLER Vector60
+#define UART2_NVIC_NUMBER UART2_IRQn
+#define UART2_HANDLER VectorF0
+#define UART3_NVIC_NUMBER UART3_IRQn
+#define UART3_HANDLER VectorF4
+#define UART4_NVIC_NUMBER UART4_IRQn
+#define UART4_HANDLER VectorF8
 #endif
 
 /*===========================================================================*/
@@ -77,7 +90,21 @@
 #if !defined(SAMV71_SERIAL_USE_USART2) || defined(__DOXYGEN__)
 #define SAMV71_SERIAL_USE_USART2             FALSE
 #endif
-/* TODO: We also have UARTs!!!! */
+#if !defined(SAMV71_SERIAL_USE_UART0) || defined(__DOXYGEN__)
+#define SAMV71_SERIAL_USE_UART0             FALSE
+#endif
+#if !defined(SAMV71_SERIAL_USE_UART1) || defined(__DOXYGEN__)
+#define SAMV71_SERIAL_USE_UART1             FALSE
+#endif
+#if !defined(SAMV71_SERIAL_USE_UART2) || defined(__DOXYGEN__)
+#define SAMV71_SERIAL_USE_UART2             FALSE
+#endif
+#if !defined(SAMV71_SERIAL_USE_UART3) || defined(__DOXYGEN__)
+#define SAMV71_SERIAL_USE_UART3             FALSE
+#endif
+#if !defined(SAMV71_SERIAL_USE_UART4) || defined(__DOXYGEN__)
+#define SAMV71_SERIAL_USE_UART4             FALSE
+#endif
 /** @} */
 
 /*===========================================================================*/
@@ -100,6 +127,21 @@
 #endif
 #if SAMV71_SERIAL_USE_USART2 && !defined(ID_USART2)
 #error "USART2 is not present on this device"
+#endif
+#if SAMV71_SERIAL_USE_UART0 && !defined(ID_UART0)
+#error "UART0 is not present on this device"
+#endif
+#if SAMV71_SERIAL_USE_UART1 && !defined(ID_UART1)
+#error "UART1 is not present on this device"
+#endif
+#if SAMV71_SERIAL_USE_UART2 && !defined(ID_UART2)
+#error "UART2 is not present on this device"
+#endif
+#if SAMV71_SERIAL_USE_UART3 && !defined(ID_UART3)
+#error "UART3 is not present on this device"
+#endif
+#if SAMV71_SERIAL_USE_UART4 && !defined(ID_UART4)
+#error "UART4 is not present on this device"
 #endif
 
 /*===========================================================================*/
@@ -170,7 +212,8 @@ typedef struct hal_serial_config {
   uint8_t                   ob[SERIAL_BUFFERS_SIZE];                        \
   /* End of the mandatory fields.*/                                         \
   /* Device specific fields */                                              \
-  Usart *                   device; \
+  Usart *                   usart;                                          \
+  Uart *                    uart;
 
 /*===========================================================================*/
 /* Driver macros.                                                            */
@@ -189,6 +232,21 @@ extern SerialDriver SD1;
 #if (SAMV71_SERIAL_USE_USART2 == TRUE) && !defined(__DOXYGEN__)
 extern SerialDriver SD2;
 #endif
+#if (SAMV71_SERIAL_USE_UART0 == TRUE) && !defined(__DOXYGEN__)
+extern SerialDriver SD3;
+#endif
+#if (SAMV71_SERIAL_USE_UART1 == TRUE) && !defined(__DOXYGEN__)
+extern SerialDriver SD4;
+#endif
+#if (SAMV71_SERIAL_USE_UART2 == TRUE) && !defined(__DOXYGEN__)
+extern SerialDriver SD5;
+#endif
+#if (SAMV71_SERIAL_USE_UART3 == TRUE) && !defined(__DOXYGEN__)
+extern SerialDriver SD6;
+#endif
+#if (SAMV71_SERIAL_USE_UART4 == TRUE) && !defined(__DOXYGEN__)
+extern SerialDriver SD7;
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -196,7 +254,6 @@ extern "C" {
   void sd_lld_init(void);
   void sd_lld_start(SerialDriver *sdp, const SerialConfig *config);
   void sd_lld_stop(SerialDriver *sdp);
-  void sd_lld_serve_interrupt(SerialDriver *sdp);
 #ifdef __cplusplus
 }
 #endif
