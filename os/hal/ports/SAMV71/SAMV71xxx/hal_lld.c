@@ -23,6 +23,7 @@
  */
 
 #include "hal.h"
+#include "samv71_xdmac.h"
 
 /*===========================================================================*/
 /* Driver local definitions.                                                 */
@@ -70,7 +71,7 @@ const halclkcfg_t hal_clkcfg_default = {
  * @notapi
  */
 void hal_lld_init(void) {
-
+  xdmacInit();
 }
 
 #if defined(HAL_LLD_USE_CLOCK_MANAGEMENT) || defined(__DOXYGEN__)
