@@ -72,7 +72,7 @@ typedef enum IRQn
   PendSV_IRQn           = -2,  /**< 14 Cortex-M7 Pend SV Interrupt           */
   SysTick_IRQn          = -1,  /**< 15 Cortex-M7 System Tick Interrupt       */
 /******  SAMV71Q21B specific Interrupt Numbers *********************************/
-  
+  /* Vector40 */
   SUPC_IRQn            =  0, /**<  0 SAMV71Q21B Supply Controller (SUPC) */
   RSTC_IRQn            =  1, /**<  1 SAMV71Q21B Reset Controller (RSTC) */
   RTC_IRQn             =  2, /**<  2 SAMV71Q21B Real Time Clock (RTC) */

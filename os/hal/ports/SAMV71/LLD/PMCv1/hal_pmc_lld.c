@@ -16,6 +16,7 @@ uint32_t pmc_enable_periph_clk(uint32_t ul_id)
 #if defined(REG_PMC_PCR)
         uint32_t pcr;
         PMC->PMC_PCR = ul_id & 0x7F;
+        //read the current settings and modify to contain enable bit
         pcr = PMC->PMC_PCR | PMC_PCR_EN | PMC_PCR_CMD;
         PMC->PMC_PCR = pcr;
         return 0;
