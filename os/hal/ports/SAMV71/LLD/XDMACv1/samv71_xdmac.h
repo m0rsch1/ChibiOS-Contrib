@@ -142,7 +142,11 @@ typedef struct samv71_xdmac_channel {
 #define XDMAC_MBR_UBC_UBLEN(value) ((XDMAC_MBR_UBC_UBLEN_Msk & ((value) << XDMAC_MBR_UBC_UBLEN_Pos)))
 #define XDMAC_MBR_UBC_NDE (0x1u << 24)
 #define XDMAC_MBR_UBC_NSEN (0x1u << 25)
+#define XDMAC_MBR_UBC_NSEN_SRC_PARAMS_UPDATED XDMAC_MBR_UBC_NSEN
+#define XDMAC_MBR_UBC_NSEN_SRC_PARAMS_UNCHANGED (0)
 #define XDMAC_MBR_UBC_NDEN (0x1u << 26)
+#define XDMAC_MBR_UBC_NDEN_DST_PARAMS_UPDATED XDMAC_MBR_UBC_NDEN
+#define XDMAC_MBR_UBC_NDEN_DST_PARAMS_UNCHANGED (0)
 #define XDMAC_MBR_UBC_NVIEW_Pos 27
 #define XDMAC_MBR_UBC_NVIEW_Msk (0x3u << XDMAC_MBR_UBC_NVIEW_Pos)
 #define XDMAC_MBR_UBC_NVIEW(value) ((XDMAC_MBR_UBC_NVIEW_Msk & ((value) << XDMAC_MBR_UBC_NVIEW_Pos)))
@@ -154,7 +158,8 @@ typedef struct samv71_xdmac_channel {
 //note that there is nothing in this struct saying what it is; that information
 //is either in the previous descriptor or in the CNDC register before the
 //channel is started.
-typedef struct samv71_xdmac_linked_list_base {
+typedef struct samv71_xdmac_linked_list_base samv71_xdmac_linked_list_base_t;
+struct samv71_xdmac_linked_list_base {
     struct samv71_xdmac_linked_list_base *XDMAC_MBR_NDA;
     //NDE use next descriptor; gets loaded into CNDC.NDE
     //NSEN update destination parameters with next view; gets loaded into CNDC.NDSUP
@@ -162,39 +167,39 @@ typedef struct samv71_xdmac_linked_list_base {
     //NVIEW which type of view the next descriptor is; 0-3, map to samv71_xdmac_linked_list_view_{0-3}_t; gets loaded into CNDC.NDVIEW
     //UBLEN gets loaded into CUBC
     uint32_t XDMAC_MBR_UBC;
-} samv71_xdmac_linked_list_base_t;
+};
 
 typedef struct {
-    struct samv71_xdmac_linked_list_base *XDMAC_MBR_NDA;
+    samv71_xdmac_linked_list_base_t *XDMAC_MBR_NDA;
     uint32_t XDMAC_MBR_UBC;
-    void const *XDMAC_MBR_TA; //"transfer address member" either sa or da, depending on the nsen/nden bits in the previous descriptor; thus, this will be loaded into either CSA or CDA.
+    void const *XDMAC_MBR_TA; //"transfer address member" either sa or da, depending on the nsen/nden bits in the previous descriptor; thus, this will be loaded into either CSA or CDA. //actually, the member this is loaded into depends on the configuration; CSA is only loaded for MEM2PER. CDA is only loaded for PER2MEM and MEM2MEM. Still, the gating by the NDEN/NSEN from the previous descriptor should hold. Q: what actually determines the target register? Bits in CC? What happens when said bits change?
 } samv71_xdmac_linked_list_view_0_t;
 
 typedef struct {
-    struct samv71_xdmac_linked_list_base *XDMAC_MBR_NDA;
+    samv71_xdmac_linked_list_base_t *XDMAC_MBR_NDA;
     uint32_t XDMAC_MBR_UBC;
-    void const *XDMAC_MBR_SA;//source address; gets loaded into CSA(depending on CNDC.NDSUP/nsen?)
-    void *XDMAC_MBR_DA;//destination address; gets loaded into CDA(depending on CNDC.NDDUP/nden?)
+    void const *XDMAC_MBR_SA;//source address; gets loaded into CSA depending on previous descriptors NSEN or CNDC.NDSUP
+    void *XDMAC_MBR_DA;//destination address; gets loaded into CDA depending on previous descriptors NDEN or CNDC.NDDUP
 } samv71_xdmac_linked_list_view_1_t;
 
 typedef struct {
-    struct samv71_xdmac_linked_list_base *XDMAC_MBR_NDA;
+    samv71_xdmac_linked_list_base_t *XDMAC_MBR_NDA;
     uint32_t XDMAC_MBR_UBC;
-    void *XDMAC_MBR_SA;
-    void *XDMAC_MBR_DA;
-    uint32_t XDMAC_MBR_CFG;//configuration register; gets loaded into CC (selectively depending on CNDC.NDSUP/nsen/CNDC.NDDUP/nden?)
+    void const *XDMAC_MBR_SA;//source address; gets loaded into CSA depending on previous descriptors NSEN or CNDC.NDSUP
+    void *XDMAC_MBR_DA;//destination address; gets loaded into CDA depending on previous descriptors NDEN or CNDC.NDDUP
+    uint32_t XDMAC_MBR_CFG;//configuration register; gets loaded into CC
 } samv71_xdmac_linked_list_view_2_t;
 
 typedef struct {
-    struct samv71_xdmac_linked_list_base *XDMAC_MBR_NDA;
+    samv71_xdmac_linked_list_base_t *XDMAC_MBR_NDA;
     uint32_t XDMAC_MBR_UBC;
-    void *XDMAC_MBR_SA;
-    void *XDMAC_MBR_DA;
-    uint32_t XDMAC_MBR_CFG;
+    void const *XDMAC_MBR_SA;//source address; gets loaded into CSA depending on previous descriptors NSEN or CNDC.NDSUP
+    void *XDMAC_MBR_DA;//destination address; gets loaded into CDA depending on previous descriptors NDEN or CNDC.NDDUP
+    uint32_t XDMAC_MBR_CFG;//configuration register; gets loaded into CC
     uint32_t XDMAC_MBR_BC; //block control register; gets loaded into CBC
-    uint32_t XDMAC_MBR_DS; //data stride register; gets loaded into CDS_MSP(selectively depending on CNDC.NDSUP/nsen/CNDC.NDDUP/nden?)
-    uint32_t XDMAC_MBR_SUS; //source microblock stride register; gets loaded into CSUS(depending on CNDC.NDSUP/nsen?)
-    uint32_t XDMAC_MBR_DUS; //destination microblock stride register; gets loaded into CDUS(depending on CNDC.NDDUP/nden?)
+    uint32_t XDMAC_MBR_DS; //data stride register; gets loaded into CDS_MSP
+    uint32_t XDMAC_MBR_SUS; //source microblock stride register; gets loaded into CSUS
+    uint32_t XDMAC_MBR_DUS; //destination microblock stride register; gets loaded into CDUS
 } samv71_xdmac_linked_list_view_3_t;
 
 /*===========================================================================*/
