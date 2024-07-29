@@ -54,58 +54,80 @@ ADCDriver ADCD1;
 /*===========================================================================*/
 
 static void adc_lld_serve_interrupt(ADCDriver *adcp) {
-    uint32_t isr = adcp->device->AFEC_ISR;
+  uint32_t isr = adcp->device->AFEC_ISR;
+  uint32_t imr = adcp->device->AFEC_IMR;
+  isr &= imr;
 
-    if((isr & AFEC_ISR_GOVRE) != 0 && adcp->state == ADC_ACTIVE) {
-        //reading to clear the interrupt
-        uint32_t over = adcp->device->AFEC_OVER;
-        (void)over;
-        //this calls adc_lld_stop_conversion
-        _adc_isr_error_code(adcp, ADC_ERR_OVERFLOW);
-    }
-    if((isr & AFEC_ISR_COMPE) != 0 && adcp->state == ADC_ACTIVE) {
-        //this calls adc_lld_stop_conversion
-        _adc_isr_error_code(adcp, ADC_ERR_AWD);
-    }
-    if((adcp->config->flags & ADC_FLAG_USE_DMA) == 0 &&
-        (isr & AFEC_ISR_DRDY) != 0 && adcp->state == ADC_ACTIVE) {
-        if(adcp->samples && adcp->depth * adcp->grpp->num_channels > adcp->current_pos) {
-            uint32_t lcdr = adcp->device->AFEC_LCDR;
-            adcp->samples[adcp->current_pos] =
-                lcdr & AFEC_LCDR_LDATA_Msk;
-            osalDbgAssert(((lcdr & AFEC_LCDR_CHNB_Msk) >> AFEC_LCDR_CHNB_Pos) ==
-            ((adcp->grpp->channel_sequence >> (adcp->current_channel*4)) & 0xf), "Unexpected channel");
-            adcp->current_pos++;
-            do {
-                adcp->current_channel++;
-                if(adcp->current_channel >= 12) {
-                    adcp->current_channel = 0;
-                }
-            } while ((adcp->grpp->channel_enabled & (1 << adcp->current_channel)) == 0);
+  if ((isr & AFEC_ISR_GOVRE) != 0 && adcp->state == ADC_ACTIVE) {
+    //reading to clear the interrupt
+    uint32_t over = adcp->device->AFEC_OVER;
+    (void)over;
+    //this calls adc_lld_stop_conversion
+    _adc_isr_error_code(adcp, ADC_ERR_OVERFLOW);
+  }
+  if ((isr & AFEC_ISR_COMPE) != 0 && adcp->state == ADC_ACTIVE) {
+    //this calls adc_lld_stop_conversion
+    _adc_isr_error_code(adcp, ADC_ERR_AWD);
+  }
+  if ((isr & AFEC_ISR_DRDY) != 0 &&
+      (adcp->config->flags & ADC_FLAG_USE_DMA) == 0 &&
+      adcp->state == ADC_ACTIVE) {
+    if (adcp->samples && adcp->depth * adcp->grpp->num_channels > adcp->current_pos) {
+      uint32_t lcdr = adcp->device->AFEC_LCDR;
+      adcp->samples[adcp->current_pos] =
+        lcdr & AFEC_LCDR_LDATA_Msk;
+      osalDbgAssert(((lcdr & AFEC_LCDR_CHNB_Msk) >> AFEC_LCDR_CHNB_Pos) ==
+                    ((adcp->grpp->channel_sequence >> (adcp->current_channel * 4)) & 0xf), "Unexpected channel");
+      adcp->current_pos++;
+      do {
+        adcp->current_channel++;
+        if (adcp->current_channel >= 12)
+          adcp->current_channel = 0;
+      } while ((adcp->grpp->channel_enabled & (1 << adcp->current_channel)) == 0);
 
-            if(adcp->current_pos ==
-                adcp->depth * adcp->grpp->num_channels / 2) {
-                //this may call adc_lld_stop_conversion
-                _adc_isr_half_code(adcp);
-            } else if(adcp->current_pos >= adcp->depth * adcp->grpp->num_channels) {
-                if(adcp->grpp->circular && adcp->state == ADC_ACTIVE) {
-                    adcp->current_pos = 0;
-                    adcp->current_channel = 0;
-                    while ( ( adcp->grpp->channel_enabled & ( 1 << adcp->current_channel ) ) == 0 ) {
-                        adcp->current_channel++;
-                    }
-                }
-                //this may call adc_lld_stop_conversion
-                _adc_isr_full_code(adcp);
-            }
+      if (adcp->current_pos ==
+          adcp->depth * adcp->grpp->num_channels / 2) {
+        //this may call adc_lld_stop_conversion
+        _adc_isr_half_code(adcp);
+      } else if (adcp->current_pos >= adcp->depth * adcp->grpp->num_channels) {
+        if (adcp->grpp->circular && adcp->state == ADC_ACTIVE) {
+          adcp->current_pos = 0;
+          adcp->current_channel = 0;
+          while ((adcp->grpp->channel_enabled & (1 << adcp->current_channel)) == 0) {
+            adcp->current_channel++;
+          }
         }
+        //this may call adc_lld_stop_conversion
+        _adc_isr_full_code(adcp);
+      }
+      if (adcp->current_channel == 0 &&
+          adcp->grpp->trigger_selection >= 14 &&
+          adcp->state == ADC_ACTIVE) {
+        //last conversion complete, need to retrigger
+        adcp->device->AFEC_CR = AFEC_CR_START;
+      }
     }
+  }
+  if ((isr & 0xfff) != 0 &&
+      (adcp->config->flags & ADC_FLAG_USE_DMA) != 0 &&
+      adcp->state == ADC_ACTIVE &&
+      adcp->grpp->trigger_selection >= 14) {
+    //dummy read to clear ISR
+    adcp->device->AFEC_CSELR = AFEC_CSELR_CSEL(adcp->last_channel);
+    (void)adcp->device->AFEC_CDR;
+    //last conversion complete, need to retrigger
+    adcp->device->AFEC_CR = AFEC_CR_START;
+  }
 }
 
-void adc_lld_dma_func(void *param, uint32_t flags) {
+static void adc_lld_dma_func(void *param, uint32_t flags) {
     ADCDriver *adcp = (ADCDriver *)param;
+    size_t sample_count = adcp->grpp->num_channels * adcp->depth;
+    size_t block1_count = (sample_count == 1) ? 0 : sample_count / 2;
+    size_t block2_count = sample_count - block1_count;
     if((flags & (XDMAC_CIS_RBEIS | XDMAC_CIS_WBEIS | XDMAC_CIS_ROIS)) != 0 &&
             adcp->state == ADC_ACTIVE) {
+        SCB_InvalidateDCache_by_Addr((uint32_t *) adcp->samples, sample_count * 2);
         //this calls adc_lld_stop_conversion
         _adc_isr_error_code(adcp, ADC_ERR_DMAFAILURE);
     }
@@ -120,9 +142,11 @@ void adc_lld_dma_func(void *param, uint32_t flags) {
         if(xdmacChannelGetNextDescriptor(adcp->dma_channel) ==
                 (samv71_xdmac_linked_list_base_t*)&adcp->dma_descriptors[1] ||
                 (flags & XDMAC_CIS_LIS) != 0) {
+            SCB_InvalidateDCache_by_Addr((uint32_t *) (adcp->samples + block1_count), block2_count * 2);
             //this may call adc_lld_stop_conversion
             _adc_isr_full_code(adcp);
         } else {
+            SCB_InvalidateDCache_by_Addr((uint32_t *) adcp->samples, block1_count * 2);
             //this may call adc_lld_stop_conversion
             _adc_isr_half_code(adcp);
         }
@@ -166,11 +190,13 @@ void adc_lld_init(void) {
   /* Driver initialization.*/
   adcObjectInit(&ADCD0);
   ADCD0.device = AFEC0;
+  ADCD0.dma_descriptors = (samv71_xdmac_linked_list_view_0_t *)CACHE_ALIGN(ADCD0.dma_descriptors_buf);
 #endif
 #if SAMV71_ADC_USE_ADC1 == TRUE
   /* Driver initialization.*/
   adcObjectInit(&ADCD1);
   ADCD1.device = AFEC1;
+  ADCD1.dma_descriptors = (samv71_xdmac_linked_list_view_0_t *)CACHE_ALIGN(ADCD1.dma_descriptors_buf);
 #endif
 }
 
@@ -200,12 +226,23 @@ void adc_lld_start(ADCDriver *adcp) {
   }
   /* Configures the peripheral.*/
 
-  uint8_t pre = AFEC_MAIN_CLK / 17 / adcp->config->speed;
+  uint8_t pre = AFEC_MAIN_CLK / 23 / adcp->config->speed;
+  if(pre <= 1) {//AFEC_MR_PRESCAL(0) switches the AFEC off
+    pre = 1;
+  } else {
+    //else the register content is one lower than the actual prescaler
+    //making the minimum prescaler 2.
+    pre -= 1;
+  }
+  //Maximum AFEC_MAIN_CLK / (pre+1) is 40MHz
+  //Minimum AFEC_MAIN_CLK / (pre+1) is 4MHz
+  osalDbgAssert(AFEC_MAIN_CLK / (pre+1) <= 40000000, "AFE clock frequency above maximum 40MHz(1.73MHz sampling)");
+  osalDbgAssert(AFEC_MAIN_CLK / (pre+1) >= 4000000, "AFE clock frequency above minimum 4MHz(0.173MHz sampling)");
 
   adcp->device->AFEC_MR =
         AFEC_MR_TRACKTIM(15) | AFEC_MR_TRANSFER(2) | AFEC_MR_ONE | //constants
         AFEC_MR_PRESCAL(pre) |
-        (adcp->config->mode & AFEC_CONFIG_MODE_MASK);
+        (adcp->config->mode & AFEC_CONFIG_MODE_MASK & ~AFEC_MR_FREERUN);
   adcp->device->AFEC_EMR = AFEC_EMR_TAG;
   adcp->device->AFEC_ACR = AFEC_ACR_IBCTL(3) | AFEC_ACR_PGA0EN | AFEC_ACR_PGA1EN;
 
@@ -213,9 +250,9 @@ void adc_lld_start(ADCDriver *adcp) {
   //settings are expensive (relatively), we only have the channel enable
   //in the conversion group. Only the channel offsets would be problematic when
   //we precalculate the register contents, though.
-  if((adcp->config->flags & ADC_FLAG_NUMERIC_CHANNEL_ORDER) != 0)
+  if((adcp->config->flags & ADC_FLAG_NUMERIC_CHANNEL_ORDER) != 0) {
     adcp->device->AFEC_MR &= ~AFEC_MR_USEQ;
-  else {
+  } else {
     adcp->device->AFEC_MR |= AFEC_MR_USEQ;
   }
   adcp->device->AFEC_DIFFR = adcp->config->channel_differential;
@@ -264,6 +301,7 @@ void adc_lld_stop(ADCDriver *adcp) {
     /* Resets the peripheral.*/
     ( void ) adcp->config;
     adcp->device->AFEC_CHDR = 0xfff;
+    adcp->device->AFEC_CR = AFEC_CR_SWRST;
 
     /* Disables the peripheral.*/
 #if SAMV71_ADC_USE_ADC0 == TRUE
@@ -290,6 +328,7 @@ void adc_lld_stop(ADCDriver *adcp) {
  */
 void adc_lld_start_conversion(ADCDriver *adcp) {
   osalDbgCheck(adcp->grpp->channel_enabled != 0);
+  osalDbgCheck(CHECK_CACHE_ALIGNED(adcp->samples));
   if (CH_DBG_ENABLE_CHECKS != FALSE) {
     if((adcp->config->flags & ADC_FLAG_NUMERIC_CHANNEL_ORDER) == 0) {
       uint64_t seq = adcp->grpp->channel_sequence;
@@ -339,9 +378,27 @@ void adc_lld_start_conversion(ADCDriver *adcp) {
   } else {
     //dma path
 
+    if (adcp->grpp->trigger_selection >= 14 &&
+        (adcp->config->mode & AFEC_MR_FREERUN) == 0) {
+      //need to retrigger the conversion after the last channel, so setup
+      //an interrupt on the last enabled channel.
+      adcp->last_channel = 0;
+      while((2 << adcp->last_channel) <= adcp->grpp->channel_enabled) {
+        adcp->last_channel++;
+      }
+
+      //dummy read to clear ISR
+      adcp->device->AFEC_CSELR = AFEC_CSELR_CSEL(adcp->last_channel);
+      (void)adcp->device->AFEC_CDR;
+      adcp->device->AFEC_IER = (1 << adcp->last_channel) & 0xfff;
+    }
+
     size_t sample_count = adcp->grpp->num_channels * adcp->depth;
     size_t block1_count = (sample_count==1)?0:sample_count/2;
     size_t block2_count = sample_count-block1_count;
+
+    //At least try to keep the memory adjacent to the samples alive
+    SCB_CleanDCache_by_Addr((uint32_t *) adcp->samples, sample_count * 2);
 
     adcp->dma_descriptors[0].XDMAC_MBR_NDA =
             (samv71_xdmac_linked_list_base_t*)&adcp->dma_descriptors[1];
@@ -358,6 +415,9 @@ void adc_lld_start_conversion(ADCDriver *adcp) {
     adcp->dma_descriptors[1].XDMAC_MBR_TA = adcp->samples + block1_count;
     if(adcp->grpp->circular)
       adcp->dma_descriptors[1].XDMAC_MBR_UBC |= XDMAC_MBR_UBC_NDE;
+
+    //After configuring the descriptors, make sure the XDMAC can see them in memory.
+    SCB_CleanDCache_by_Addr((uint32_t *) adcp->dma_descriptors, sizeof(adcp->dma_descriptors));
 
     xdmacChannelSetSource(adcp->dma_channel,&(adcp->device->AFEC_LCDR));
     xdmacChannelSetDestination(adcp->dma_channel, adcp->samples);
@@ -408,6 +468,7 @@ void adc_lld_start_conversion(ADCDriver *adcp) {
   if(adcp->grpp->trigger_selection >= 14) {
       //software trigger
       adcp->device->AFEC_MR &= ~AFEC_MR_TRGEN;
+      adcp->device->AFEC_MR |= (adcp->config->mode & AFEC_MR_FREERUN);
       adcp->device->AFEC_CR = AFEC_CR_START;
   } else {
       uint32_t mr = adcp->device->AFEC_MR;
@@ -434,15 +495,63 @@ void adc_lld_stop_conversion(ADCDriver *adcp) {
   (void)adcp->depth;
   (void)adcp->grpp;
 
-  adcp->device->AFEC_MR &= ~AFEC_MR_TRGEN;
+  // To immediately cancel a _running_ conversion, a reset is needed.
+  // This resets the invisible channel counter and so on.
+  adcp->device->AFEC_CR = AFEC_CR_SWRST;
 
-  if((adcp->config->flags & ADC_FLAG_USE_DMA) == 0) {
-    //non-dma path
-    adcp->device->AFEC_IDR = AFEC_IDR_DRDY;
-  } else {
+  if((adcp->config->flags & ADC_FLAG_USE_DMA) != 0) {
     //dma path
     xdmacChannelDisable(adcp->dma_channel);
   }
+
+
+  /* Reinstall configuration done during adc_lld_start and wiped by SWRST */
+
+  uint8_t pre = AFEC_MAIN_CLK / 23 / adcp->config->speed;
+  if(pre <= 1) {//AFEC_MR_PRESCAL(0) switches the AFEC off
+    pre = 1;
+  } else {
+    //else the register content is one lower than the actual prescaler
+    //making the minimum prescaler 2.
+    pre -= 1;
+  }
+
+  adcp->device->AFEC_MR =
+        AFEC_MR_TRACKTIM(15) | AFEC_MR_TRANSFER(2) | AFEC_MR_ONE | //constants
+        AFEC_MR_PRESCAL(pre) |
+        (adcp->config->mode & AFEC_CONFIG_MODE_MASK & ~AFEC_MR_FREERUN);
+  adcp->device->AFEC_EMR = AFEC_EMR_TAG;
+  adcp->device->AFEC_ACR = AFEC_ACR_IBCTL(3) | AFEC_ACR_PGA0EN | AFEC_ACR_PGA1EN;
+
+  //if needed, these can be changeable afterwards. since some of these
+  //settings are expensive (relatively), we only have the channel enable
+  //in the conversion group. Only the channel offsets would be problematic when
+  //we precalculate the register contents, though.
+  if((adcp->config->flags & ADC_FLAG_NUMERIC_CHANNEL_ORDER) != 0) {
+    adcp->device->AFEC_MR &= ~AFEC_MR_USEQ;
+  } else {
+    adcp->device->AFEC_MR |= AFEC_MR_USEQ;
+  }
+  adcp->device->AFEC_DIFFR = adcp->config->channel_differential;
+  adcp->device->AFEC_SHMR = adcp->config->channel_sh_dual;
+
+  for(int i = 0; i < 12; i++) {
+      adcp->device->AFEC_CSELR = AFEC_CSELR_CSEL(i);
+      adcp->device->AFEC_COCR = AFEC_COCR_AOFF(adcp->config->channel_offset[i]);
+  }
+
+  adcp->device->AFEC_CGR = AFEC_CGR_GAIN0(adcp->config->channel_gain[0]) |
+                             AFEC_CGR_GAIN1 ( adcp->config->channel_gain[1] ) |
+                             AFEC_CGR_GAIN2 ( adcp->config->channel_gain[2] ) |
+                             AFEC_CGR_GAIN3 ( adcp->config->channel_gain[3] ) |
+                             AFEC_CGR_GAIN4 ( adcp->config->channel_gain[4] ) |
+                             AFEC_CGR_GAIN5 ( adcp->config->channel_gain[5] ) |
+                             AFEC_CGR_GAIN6 ( adcp->config->channel_gain[6] ) |
+                             AFEC_CGR_GAIN7 ( adcp->config->channel_gain[7] ) |
+                             AFEC_CGR_GAIN8 ( adcp->config->channel_gain[8] ) |
+                             AFEC_CGR_GAIN9 ( adcp->config->channel_gain[9] ) |
+                             AFEC_CGR_GAIN10 ( adcp->config->channel_gain[10] ) |
+                             AFEC_CGR_GAIN11 ( adcp->config->channel_gain[11] );
 
 }
 

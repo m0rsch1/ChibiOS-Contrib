@@ -52,13 +52,28 @@
 
 #define AFEC_MAIN_CLK (SystemCoreClock / 2)
 
-#define AFEC_NVIC_PRIORITY CORTEX_MIN_KERNEL_PRIORITY-1
+#define AFEC_NVIC_PRIORITY CORTEX_MIN_KERNEL_PRIORITY
 
 #if defined(__SAMV71Q21B__)
 #define AFEC0_NVIC_NUMBER AFEC0_IRQn
 #define AFEC0_HANDLER VectorB4
 #define AFEC1_NVIC_NUMBER AFEC1_IRQn
 #define AFEC1_HANDLER VectorE0
+
+#define ADC_TRIGGER_AFEC0_AFE0_ADTRG 0
+#define ADC_TRIGGER_AFEC1_AFE1_ADTRG 0
+#define ADC_TRIGGER_AFEC0_TC0_TIOA 2
+#define ADC_TRIGGER_AFEC1_TC3_TIOA 2
+#define ADC_TRIGGER_AFEC0_TC1_TIOA 4
+#define ADC_TRIGGER_AFEC1_TC4_TIOA 4
+#define ADC_TRIGGER_AFEC0_TC2_TIOA 6
+#define ADC_TRIGGER_AFEC1_TC5_TIOA 6
+#define ADC_TRIGGER_AFEC0_PWM0_EVL0 8
+#define ADC_TRIGGER_AFEC1_PWM1_EVL0 8
+#define ADC_TRIGGER_AFEC0_PWM0_EVL1 10
+#define ADC_TRIGGER_AFEC1_PWM1_EVL1 10
+#define ADC_TRIGGER_ANALOG_COMPARATOR 12
+#define ADC_TRIGGER_SOFTWARE 15
 #endif
 
 #define AFEC_CONFIG_MODE_MASK (AFEC_MR_STARTUP_Msk | AFEC_MR_FREERUN | \
@@ -120,12 +135,14 @@ typedef uint32_t adcerror_t;
 /**
  * @brief   Low level fields of the ADC driver structure.
  */
-#define adc_lld_driver_fields                                               \
-  Afec *device;                                                             \
-  uint8_t current_channel;                                                  \
-  size_t current_pos;                                                       \
-  const samv71_xdmac_channel_t* dma_channel;                                \
-  samv71_xdmac_linked_list_view_0_t dma_descriptors[2]
+#define adc_lld_driver_fields                                                 \
+  Afec *device;                                                               \
+  uint8_t current_channel;                                                    \
+  uint8_t last_channel;                                                       \
+  size_t current_pos;                                                         \
+  const samv71_xdmac_channel_t* dma_channel;                                  \
+  uint8_t dma_descriptors_buf[sizeof(samv71_xdmac_linked_list_view_0_t)*2+31];\
+  samv71_xdmac_linked_list_view_0_t *dma_descriptors
 
 /**
  * @brief   Low level fields of the ADC configuration structure.
