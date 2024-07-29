@@ -180,6 +180,8 @@
 #define wspi_lld_driver_fields                                              \
   /* Pointer to the QSPIx registers block.*/                                \
   Qspi                          *qspi;                                      \
+  void                          *rxbuf;                                     \
+  size_t                        size;                                       \
   const samv71_xdmac_channel_t* dma_channel
 
 

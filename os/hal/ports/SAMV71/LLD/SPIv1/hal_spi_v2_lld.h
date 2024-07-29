@@ -146,10 +146,16 @@ typedef struct hal_spi_lld_slave_config {
   uint8_t dma_recv_hwid;                                                   \
   uint8_t dma_send_hwid;                                                   \
   uint8_t active_slave_config;                                             \
+  uint8_t dma_recv_descriptors_buf[sizeof(samv71_xdmac_linked_list_view_0_t)*2+CACHE_LINE_SIZE-1]; \
+  uint8_t dma_send_descriptors_buf[sizeof(samv71_xdmac_linked_list_view_0_t)*2+CACHE_LINE_SIZE-1]; \
+  size_t block1_size;                                                      \
+  size_t block2_size;                                                      \
+  const void *txbuf;                                                       \
+  void *rxbuf;                                                             \
   const samv71_xdmac_channel_t* dma_recv_channel;                          \
   const samv71_xdmac_channel_t* dma_send_channel;                          \
-  samv71_xdmac_linked_list_view_0_t dma_recv_descriptors[2];               \
-  samv71_xdmac_linked_list_view_0_t dma_send_descriptors[2]
+  samv71_xdmac_linked_list_view_0_t *dma_recv_descriptors;                 \
+  samv71_xdmac_linked_list_view_0_t *dma_send_descriptors
 
 /*===========================================================================*/
 /* Driver macros.                                                            */

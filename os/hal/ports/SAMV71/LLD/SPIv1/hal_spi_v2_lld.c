@@ -50,8 +50,23 @@ SPIDriver SPID1;
 /* Driver local functions.                                                   */
 /*===========================================================================*/
 
+static void SCB_InvalidateDCache_by_Addr_Unaligned(uint32_t *x, size_t n) {
+  size_t mask = ~(CACHE_LINE_SIZE-1);
+  uintptr_t begin = ((uintptr_t)x) & mask;
+  uintptr_t end = (((uintptr_t)x) + n + CACHE_LINE_SIZE-1) & mask;
+  SCB_InvalidateDCache_by_Addr((uint32_t*)begin, end - begin);
+}
+
+static void SCB_CleanDCache_by_Addr_Unaligned(uint32_t *x, size_t n) {
+  size_t mask = ~(CACHE_LINE_SIZE-1);
+  uintptr_t begin = ((uintptr_t)x) & mask;
+  uintptr_t end = (((uintptr_t)x) + n + CACHE_LINE_SIZE-1) & mask;
+  SCB_CleanDCache_by_Addr((uint32_t*)begin, end - begin);
+}
+
 static void spi_lld_setup_circular_buffer_recv(SPIDriver *spip,
     size_t block1_count, size_t block2_count, void *rxbuf, uint32_t dwidth) {
+  osalDbgCheck(CHECK_CACHE_ALIGNED(rxbuf));
 
   uint32_t *recv_addr = (uint32_t*)&(spip->device->SPI_RDR);
 
@@ -69,6 +84,8 @@ static void spi_lld_setup_circular_buffer_recv(SPIDriver *spip,
     XDMAC_MBR_UBC_UBLEN(block2_count);
   spip->dma_recv_descriptors[1].XDMAC_MBR_TA = rxbuf + block1_count;
   spip->dma_recv_descriptors[1].XDMAC_MBR_UBC |= XDMAC_MBR_UBC_NDE;
+
+  SCB_CleanDCache_by_Addr((uint32_t*)spip->dma_recv_descriptors, sizeof(*spip->dma_recv_descriptors)*2);
 
   xdmacChannelSetSource(spip->dma_recv_channel, recv_addr);
   xdmacChannelSetDestination(spip->dma_recv_channel, rxbuf);
@@ -105,6 +122,7 @@ static void spi_lld_setup_circular_buffer_recv(SPIDriver *spip,
 
 static void spi_lld_setup_linear_buffer_recv(SPIDriver *spip, size_t n,
     void *rxbuf, uint32_t dwidth) {
+  osalDbgCheck(CHECK_CACHE_ALIGNED(rxbuf));
 
   uint32_t *recv_addr = (uint32_t*)&(spip->device->SPI_RDR);
 
@@ -148,6 +166,8 @@ static void spi_lld_setup_circular_buffer_send(SPIDriver *spip,
     XDMAC_MBR_UBC_UBLEN(block2_count);
   spip->dma_send_descriptors[1].XDMAC_MBR_TA = txbuf + block1_count;
   spip->dma_send_descriptors[1].XDMAC_MBR_UBC |= XDMAC_MBR_UBC_NDE;
+
+  SCB_CleanDCache_by_Addr((uint32_t*)spip->dma_send_descriptors, sizeof(*spip->dma_send_descriptors)*2);
 
   xdmacChannelSetSource(spip->dma_send_channel, txbuf);
   xdmacChannelSetDestination(spip->dma_send_channel, send_addr);
@@ -202,6 +222,8 @@ static void spi_lld_setup_circular_constant_send(SPIDriver *spip,
     XDMAC_MBR_UBC_UBLEN(block2_count);
   spip->dma_send_descriptors[1].XDMAC_MBR_TA = send_addr;
 
+  SCB_CleanDCache_by_Addr((uint32_t*)spip->dma_send_descriptors, sizeof(*spip->dma_send_descriptors)*2);
+
   xdmacChannelSetSource(spip->dma_send_channel, send_addr);
   xdmacChannelSetDestination(spip->dma_send_channel, send_addr);
   xdmacChannelSetMicroblockLength(spip->dma_send_channel, 0);
@@ -238,6 +260,10 @@ static void spi_lld_setup_circular_constant_send(SPIDriver *spip,
 
 static void spi_lld_setup_linear_buffer_send(SPIDriver *spip, size_t n,
     const void *txbuf, uint32_t dwidth) {
+
+  size_t size = (dwidth == XDMAC_CC_DWIDTH_BYTE)?n:(n*2);
+
+  SCB_CleanDCache_by_Addr_Unaligned((uint32_t*)txbuf, size);
 
   uint32_t *send_addr = (uint32_t*)&(spip->device->SPI_TDR);
 
@@ -350,15 +376,20 @@ static void spi_lld_recv_dma_func(void *param, uint32_t flags)
     if (spip->config->circular) {
       //figure out which half we are in. if the next descriptor is #1,
       //we are in the first and vice versa.
-      if (xdmacChannelGetNextDescriptor(spip->dma_send_channel) ==
-          (samv71_xdmac_linked_list_base_t*)&(spip->dma_send_descriptors[1])) {
+      if (xdmacChannelGetNextDescriptor(spip->dma_recv_channel) ==
+          (samv71_xdmac_linked_list_base_t*)&(spip->dma_recv_descriptors[1])) {
         //the second half just completed, working on the first half again.
+        SCB_InvalidateDCache_by_Addr_Unaligned((uint32_t*)(spip->rxbuf + spip->block1_size), spip->block2_size);
         __spi_isr_full_code(spip);
+        SCB_CleanDCache_by_Addr_Unaligned((uint32_t*)(spip->txbuf + spip->block1_size), spip->block2_size);
       } else {
         //the first half just completed, working on the second half again.
+        SCB_InvalidateDCache_by_Addr(spip->rxbuf, spip->block1_size + spip->block2_size);
         __spi_isr_half_code(spip);
+        SCB_CleanDCache_by_Addr((uint32_t*)spip->txbuf, spip->block1_size);
       }
     } else {
+      SCB_InvalidateDCache_by_Addr(spip->rxbuf, spip->block1_size + spip->block2_size);
       __spi_isr_complete_code(spip)
     }
   }
@@ -401,13 +432,17 @@ void spi_lld_init(void) {
   SPID0.device = SPI0;
   SPID0.dma_recv_hwid = SAMV71_XDMAC_HWREQ_SPI0_RECV;
   SPID0.dma_send_hwid = SAMV71_XDMAC_HWREQ_SPI0_XMIT;
+  SPID0.dma_recv_descriptors = (samv71_xdmac_linked_list_view_0_t*)CACHE_ALIGN(SPID0.dma_recv_descriptors_buf);
+  SPID0.dma_send_descriptors = (samv71_xdmac_linked_list_view_0_t*)CACHE_ALIGN(SPID0.dma_send_descriptors_buf);
 #endif
 #if SAMV71_SPI_USE_SPI1 == TRUE
   /* Driver initialization.*/
-  spiObjectInit(&SPID0);
+  spiObjectInit(&SPID1);
   SPID1.device = SPI1;
   SPID1.dma_recv_hwid = SAMV71_XDMAC_HWREQ_SPI1_RECV;
   SPID1.dma_send_hwid = SAMV71_XDMAC_HWREQ_SPI1_XMIT;
+  SPID1.dma_recv_descriptors = (samv71_xdmac_linked_list_view_0_t*)CACHE_ALIGN(SPID1.dma_recv_descriptors_buf);
+  SPID1.dma_send_descriptors = (samv71_xdmac_linked_list_view_0_t*)CACHE_ALIGN(SPID1.dma_send_descriptors_buf);
 #endif
 }
 
@@ -612,6 +647,7 @@ msg_t spi_lld_ignore(SPIDriver *spip, size_t n) {
  */
 msg_t spi_lld_exchange(SPIDriver *spip, size_t n,
                        const void *txbuf, void *rxbuf) {
+  osalDbgCheck(CHECK_CACHE_ALIGNED(rxbuf));
   uint32_t active_csr = spip->config->slave_configs[spip->active_slave_config].csr;
   uint32_t dwidth = (active_csr & SPI_CSR_BITS_Msk) > SPI_CSR_BITS_8_BIT ?
                     XDMAC_CC_DWIDTH_HALFWORD : XDMAC_CC_DWIDTH_BYTE;
@@ -631,12 +667,20 @@ msg_t spi_lld_exchange(SPIDriver *spip, size_t n,
     size_t block1_count = (n==1)?0:n/2;
     size_t block2_count = n-block1_count;
 
+    spip->block1_size = (dwidth == XDMAC_CC_DWIDTH_BYTE)?block1_count:(2*block1_count);
+    spip->block2_size = (dwidth == XDMAC_CC_DWIDTH_BYTE)?block2_count:(2*block2_count);
+    spip->txbuf = txbuf;
+    spip->rxbuf = rxbuf;
     //setup the recv buffer first, because it will wait for the send buffer
     spi_lld_setup_circular_buffer_recv(spip, block1_count, block2_count, rxbuf, dwidth);
     spi_lld_setup_circular_buffer_send(spip, block1_count, block2_count, txbuf, dwidth);
 
 
   } else {
+    spip->block1_size = 0;
+    spip->block2_size = (dwidth == XDMAC_CC_DWIDTH_BYTE)?n:(2*n);
+    spip->txbuf = txbuf;
+    spip->rxbuf = rxbuf;
     spi_lld_setup_linear_buffer_recv(spip, n, rxbuf, dwidth);
     spi_lld_setup_linear_buffer_send(spip, n, txbuf, dwidth);
   }
@@ -702,6 +746,7 @@ msg_t spi_lld_send(SPIDriver *spip, size_t n, const void *txbuf) {
  * @notapi
  */
 msg_t spi_lld_receive(SPIDriver *spip, size_t n, void *rxbuf) {
+  osalDbgCheck(CHECK_CACHE_ALIGNED(rxbuf));
   uint32_t active_csr = spip->config->slave_configs[spip->active_slave_config].csr;
   uint32_t dwidth = (active_csr & SPI_CSR_BITS_Msk) > SPI_CSR_BITS_8_BIT ?
                     XDMAC_CC_DWIDTH_HALFWORD : XDMAC_CC_DWIDTH_BYTE;
