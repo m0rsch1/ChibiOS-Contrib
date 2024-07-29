@@ -498,12 +498,12 @@ void XDMAC_Handler      ( void );
 #define ID_TWIHS1 (20) /**< \brief Two Wire Interface 1 HS (TWIHS1) */
 #define ID_SPI0   (21) /**< \brief Serial Peripheral Interface 0 (SPI0) */
 #define ID_SSC    (22) /**< \brief Synchronous Serial Controller (SSC) */
-#define ID_TC0    (23) /**< \brief Timer/Counter 0 (TC0) */
-#define ID_TC1    (24) /**< \brief Timer/Counter 1 (TC1) */
-#define ID_TC2    (25) /**< \brief Timer/Counter 2 (TC2) */
-#define ID_TC3    (26) /**< \brief Timer/Counter 3 (TC3) */
-#define ID_TC4    (27) /**< \brief Timer/Counter 4 (TC4) */
-#define ID_TC5    (28) /**< \brief Timer/Counter 5 (TC5) */
+#define ID_TC0    (23) /**< \brief Timer/Counter 0, Channel 0 (TC0) */
+#define ID_TC1    (24) /**< \brief Timer/Counter 0, Channel 1 (TC1) */
+#define ID_TC2    (25) /**< \brief Timer/Counter 0, Channel 2 (TC2) */
+#define ID_TC3    (26) /**< \brief Timer/Counter 1, Channel 0 (TC3) */
+#define ID_TC4    (27) /**< \brief Timer/Counter 1, Channel 1 (TC4) */
+#define ID_TC5    (28) /**< \brief Timer/Counter 1, Channel 2 (TC5) */
 #define ID_AFEC0  (29) /**< \brief Analog Front End 0 (AFEC0) */
 #define ID_DACC   (30) /**< \brief Digital To Analog Converter (DACC) */
 #define ID_PWM0   (31) /**< \brief Pulse Width Modulation 0 (PWM0) */
@@ -520,12 +520,12 @@ void XDMAC_Handler      ( void );
 #define ID_UART2  (44) /**< \brief UART 2 (UART2) */
 #define ID_UART3  (45) /**< \brief UART 3 (UART3) */
 #define ID_UART4  (46) /**< \brief UART 4 (UART4) */
-#define ID_TC6    (47) /**< \brief Timer/Counter 6 (TC6) */
-#define ID_TC7    (48) /**< \brief Timer/Counter 7 (TC7) */
-#define ID_TC8    (49) /**< \brief Timer/Counter 8 (TC8) */
-#define ID_TC9    (50) /**< \brief Timer/Counter 9 (TC9) */
-#define ID_TC10   (51) /**< \brief Timer/Counter 10 (TC10) */
-#define ID_TC11   (52) /**< \brief Timer/Counter 11 (TC11) */
+#define ID_TC6    (47) /**< \brief Timer/Counter 2, Channel 0 (TC6) */
+#define ID_TC7    (48) /**< \brief Timer/Counter 2, Channel 1 (TC7) */
+#define ID_TC8    (49) /**< \brief Timer/Counter 2, Channel 2 (TC8) */
+#define ID_TC9    (50) /**< \brief Timer/Counter 3, Channel 0 (TC9) */
+#define ID_TC10   (51) /**< \brief Timer/Counter 3, Channel 1 (TC10) */
+#define ID_TC11   (52) /**< \brief Timer/Counter 3, Channel 2 (TC11) */
 #define ID_MLB    (53) /**< \brief MediaLB (MLB) */
 #define ID_AES    (56) /**< \brief AES (AES) */
 #define ID_TRNG   (57) /**< \brief True Random Generator (TRNG) */

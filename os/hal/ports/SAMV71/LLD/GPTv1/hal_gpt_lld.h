@@ -27,13 +27,12 @@
 
 #if (HAL_USE_GPT == TRUE) || defined(__DOXYGEN__)
 
-#include "hal_st_lld.h"
-
 /*===========================================================================*/
 /* Driver constants.                                                         */
 /*===========================================================================*/
 
 #define GPT_MAIN_CLK (SystemCoreClock / 2)
+//also uses PCK6, with ProgrammableClock[6], if closer to the target frequency
 
 // NOTE: USART has CORTEX_MIN_KERNEL_PRIORITY-1, SYSTICK has CORTEX_MAX_KERNEL_PRIORITY+1
 #define GPT_NVIC_PRIORITY CORTEX_MIN_KERNEL_PRIORITY-2
@@ -47,6 +46,20 @@
 #define TC3_NVIC_NUMBER TC3_IRQn
 #define TC4_HANDLER VectorAC
 #define TC4_NVIC_NUMBER TC4_IRQn
+#define TC5_HANDLER VectorB0
+#define TC5_NVIC_NUMBER TC5_IRQn
+#define TC6_HANDLER VectorFC
+#define TC6_NVIC_NUMBER TC6_IRQn
+#define TC7_HANDLER Vector100
+#define TC7_NVIC_NUMBER TC7_IRQn
+#define TC8_HANDLER Vector104
+#define TC8_NVIC_NUMBER TC8_IRQn
+#define TC9_HANDLER Vector108
+#define TC9_NVIC_NUMBER TC9_IRQn
+#define TC10_HANDLER Vector10C
+#define TC10_NVIC_NUMBER TC10_IRQn
+#define TC11_HANDLER Vector110
+#define TC11_NVIC_NUMBER TC11_IRQn
 
 /*===========================================================================*/
 /* Driver pre-compile time settings.                                         */
@@ -102,16 +115,85 @@
 #endif
 /** @} */
 
+/**
+ * @brief   GPTD5 driver enable switch.
+ * @details If set to @p TRUE the support for GPTD5 is included.
+ * @note    The default is @p FALSE.
+ */
+#if !defined(SAMV71_GPT_USE_GPT5) || defined(__DOXYGEN__)
+#define SAMV71_GPT_USE_GPT5               FALSE
+#endif
+/** @} */
+
+/**
+ * @brief   GPTD6 driver enable switch.
+ * @details If set to @p TRUE the support for GPTD6 is included.
+ * @note    The default is @p FALSE.
+ */
+#if !defined(SAMV71_GPT_USE_GPT6) || defined(__DOXYGEN__)
+#define SAMV71_GPT_USE_GPT6               FALSE
+#endif
+/** @} */
+
+/**
+ * @brief   GPTD7 driver enable switch.
+ * @details If set to @p TRUE the support for GPTD7 is included.
+ * @note    The default is @p FALSE.
+ */
+#if !defined(SAMV71_GPT_USE_GPT7) || defined(__DOXYGEN__)
+#define SAMV71_GPT_USE_GPT7               FALSE
+#endif
+/** @} */
+
+/**
+ * @brief   GPTD8 driver enable switch.
+ * @details If set to @p TRUE the support for GPTD8 is included.
+ * @note    The default is @p FALSE.
+ */
+#if !defined(SAMV71_GPT_USE_GPT8) || defined(__DOXYGEN__)
+#define SAMV71_GPT_USE_GPT8               FALSE
+#endif
+/** @} */
+
+/**
+ * @brief   GPTD9 driver enable switch.
+ * @details If set to @p TRUE the support for GPTD9 is included.
+ * @note    The default is @p FALSE.
+ */
+#if !defined(SAMV71_GPT_USE_GPT9) || defined(__DOXYGEN__)
+#define SAMV71_GPT_USE_GPT9               FALSE
+#endif
+/** @} */
+
+/**
+ * @brief   GPTD10 driver enable switch.
+ * @details If set to @p TRUE the support for GPTD10 is included.
+ * @note    The default is @p FALSE.
+ */
+#if !defined(SAMV71_GPT_USE_GPT10) || defined(__DOXYGEN__)
+#define SAMV71_GPT_USE_GPT10               FALSE
+#endif
+/** @} */
+
+/**
+ * @brief   GPTD11 driver enable switch.
+ * @details If set to @p TRUE the support for GPTD11 is included.
+ * @note    The default is @p FALSE.
+ */
+#if !defined(SAMV71_GPT_USE_GPT11) || defined(__DOXYGEN__)
+#define SAMV71_GPT_USE_GPT11               FALSE
+#endif
+/** @} */
+
 /*===========================================================================*/
 /* Derived constants and error checks.                                       */
 /*===========================================================================*/
 
-#if (GPT_NVIC_PRIORITY < ST_NVIC_PRIORITY)
-#warning "Setting GPT prio higher than systick prio might cause problems"
-#endif
-
 #if !OSAL_IRQ_IS_VALID_PRIORITY(GPT_NVIC_PRIORITY)
 #error "Invalid GPT interrupt priority"
+/* The priority value is out of range or higher than the base priority used
+ * for critical sections in the kernel(CORTEX_MAX_KERNEL_PRIORITY).
+ */
 #endif
 
 #if SAMV71_GPT_USE_GPT0 && !defined(ID_TC0)
@@ -128,6 +210,27 @@
 #endif
 #if SAMV71_GPT_USE_GPT4 && !defined(ID_TC4)
 #error "GPT4 is not present on this device"
+#endif
+#if SAMV71_GPT_USE_GPT5 && !defined(ID_TC5)
+#error "GPT5 is not present on this device"
+#endif
+#if SAMV71_GPT_USE_GPT6 && !defined(ID_TC6)
+#error "GPT6 is not present on this device"
+#endif
+#if SAMV71_GPT_USE_GPT7 && !defined(ID_TC7)
+#error "GPT7 is not present on this device"
+#endif
+#if SAMV71_GPT_USE_GPT8 && !defined(ID_TC8)
+#error "GPT8 is not present on this device"
+#endif
+#if SAMV71_GPT_USE_GPT9 && !defined(ID_TC9)
+#error "GPT9 is not present on this device"
+#endif
+#if SAMV71_GPT_USE_GPT10 && !defined(ID_TC10)
+#error "GPT10 is not present on this device"
+#endif
+#if SAMV71_GPT_USE_GPT11 && !defined(ID_TC11)
+#error "GPT11 is not present on this device"
 #endif
 
 /*===========================================================================*/
@@ -227,6 +330,27 @@ extern GPTDriver GPTD3;
 #if (SAMV71_GPT_USE_GPT4 == TRUE) && !defined(__DOXYGEN__)
 extern GPTDriver GPTD4;
 #endif
+#if (SAMV71_GPT_USE_GPT5 == TRUE) && !defined(__DOXYGEN__)
+extern GPTDriver GPTD5;
+#endif
+#if (SAMV71_GPT_USE_GPT6 == TRUE) && !defined(__DOXYGEN__)
+extern GPTDriver GPTD6;
+#endif
+#if (SAMV71_GPT_USE_GPT7 == TRUE) && !defined(__DOXYGEN__)
+extern GPTDriver GPTD7;
+#endif
+#if (SAMV71_GPT_USE_GPT8 == TRUE) && !defined(__DOXYGEN__)
+extern GPTDriver GPTD8;
+#endif
+#if (SAMV71_GPT_USE_GPT9 == TRUE) && !defined(__DOXYGEN__)
+extern GPTDriver GPTD9;
+#endif
+#if (SAMV71_GPT_USE_GPT10 == TRUE) && !defined(__DOXYGEN__)
+extern GPTDriver GPTD10;
+#endif
+#if (SAMV71_GPT_USE_GPT11 == TRUE) && !defined(__DOXYGEN__)
+extern GPTDriver GPTD11;
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -237,7 +361,6 @@ extern "C" {
   void gpt_lld_start_timer(GPTDriver *gptp, gptcnt_t interval);
   void gpt_lld_stop_timer(GPTDriver *gptp);
   void gpt_lld_polled_delay(GPTDriver *gptp, gptcnt_t interval);
-  void gpt_lld_serve_interrupt(GPTDriver *gptp);
 #ifdef __cplusplus
 }
 #endif
