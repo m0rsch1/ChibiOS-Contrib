@@ -536,7 +536,7 @@ void sd_lld_start(SerialDriver *sdp, const SerialConfig *config) {
       calculate_uart_baudrate(USART_PCLK_CLOCK, config->speed,
                               &cd_pclk, &err_pclk);
       /* Calculate clock divider according to the fraction calculated formula. */
-      if(err_main < err_pclk) {
+      if(err_main <= err_pclk) {
         mr |= UART_MR_BRSRCCK_PERIPH_CLK;
         /* Configure the baudrate generate register. */
         sdp->uart->UART_BRGR = (cd_main << UART_BRGR_CD_Pos);
