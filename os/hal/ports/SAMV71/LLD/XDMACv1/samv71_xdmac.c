@@ -122,20 +122,19 @@ OSAL_IRQ_HANDLER(XDMAC_HANDLER) {
   uint32_t gis = XDMAC->XDMAC_GIS;
   uint32_t gim = XDMAC->XDMAC_GIM;
   gis &= gim;
-  for(unsigned int i = 0; i < SAMV71_XDMAC_CHANNELS; i++) {
-    if((gis & (1 << i)) == 0)
-      continue;
-    if((xdmac.allocated_mask & (1U << i)) == 0) {
-      XDMAC->XDMAC_GID = XDMAC_GID_ID0 << i;
-      continue;
+  XDMAC->XDMAC_GID = gis & ~xdmac.allocated_mask;
+  gis &= xdmac.allocated_mask;
+  while (gis != 0) {
+    unsigned int i = 31 - __CLZ(gis);
+    gis &= ~(1U << i);
+
+    if (xdmac.channels[i].func) {
+      uint32_t cis = XDMAC->XDMAC_CHID[i].XDMAC_CIS;
+      uint32_t cim = XDMAC->XDMAC_CHID[i].XDMAC_CIM;
+      cis &= cim;
+
+      xdmac.channels[i].func(xdmac.channels[i].param, cis);
     }
-
-    uint32_t cis = XDMAC->XDMAC_CHID[i].XDMAC_CIS;
-    uint32_t cim = XDMAC->XDMAC_CHID[i].XDMAC_CIM;
-    cis &= cim;
-
-    if(xdmac.channels[i].func)
-        xdmac.channels[i].func(xdmac.channels[i].param, cis);
   }
 
   OSAL_IRQ_EPILOGUE();
