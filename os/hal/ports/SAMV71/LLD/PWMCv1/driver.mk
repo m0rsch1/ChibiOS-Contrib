@@ -1,0 +1,4 @@
+PLATFORMSRC += $(CHIBIOS_CONTRIB)/os/hal/ports/SAMV71/LLD/PWMCv1/hal_pwm_lld.c
+
+PLATFORMINC += $(CHIBIOS_CONTRIB)/os/hal/ports/SAMV71/LLD/PWMCv1
+
