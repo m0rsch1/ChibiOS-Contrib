@@ -52,24 +52,8 @@ static uint32_t const spi_lld_constant_output_value = 0xffffffffU;
 /* Driver local functions.                                                   */
 /*===========================================================================*/
 
-static void SCB_InvalidateDCache_by_Addr_Unaligned(uint32_t *x, size_t n) {
-  size_t mask = ~(CACHE_LINE_SIZE-1);
-  uintptr_t begin = ((uintptr_t)x) & mask;
-  uintptr_t end = (((uintptr_t)x) + n + CACHE_LINE_SIZE-1) & mask;
-  SCB_InvalidateDCache_by_Addr((uint32_t*)begin, end - begin);
-}
-
-static void SCB_CleanDCache_by_Addr_Unaligned(uint32_t *x, size_t n) {
-  size_t mask = ~(CACHE_LINE_SIZE-1);
-  uintptr_t begin = ((uintptr_t)x) & mask;
-  uintptr_t end = (((uintptr_t)x) + n + CACHE_LINE_SIZE-1) & mask;
-  SCB_CleanDCache_by_Addr((uint32_t*)begin, end - begin);
-}
-
 static void spi_lld_setup_circular_buffer_recv(SPIDriver *spip,
     size_t block1_count, size_t block2_count, void *rxbuf, uint32_t dwidth) {
-  osalDbgCheck(CHECK_CACHE_ALIGNED(rxbuf));
-
   uint32_t *recv_addr = (uint32_t*)&(spip->device->SPI_RDR);
 
   spip->dma_recv_descriptors[0].XDMAC_MBR_NDA =
@@ -124,8 +108,6 @@ static void spi_lld_setup_circular_buffer_recv(SPIDriver *spip,
 
 static void spi_lld_setup_linear_buffer_recv(SPIDriver *spip, size_t n,
     void *rxbuf, uint32_t dwidth) {
-  osalDbgCheck(CHECK_CACHE_ALIGNED(rxbuf));
-
   uint32_t *recv_addr = (uint32_t*)&(spip->device->SPI_RDR);
 
   xdmacChannelSetInterruptCauses(spip->dma_recv_channel,
@@ -262,11 +244,6 @@ static void spi_lld_setup_circular_constant_send(SPIDriver *spip,
 
 static void spi_lld_setup_linear_buffer_send(SPIDriver *spip, size_t n,
     const void *txbuf, uint32_t dwidth, bool send_only) {
-
-  size_t size = (dwidth == XDMAC_CC_DWIDTH_BYTE)?n:(n*2);
-
-  SCB_CleanDCache_by_Addr_Unaligned((uint32_t*)txbuf, size);
-
   uint32_t *send_addr = (uint32_t*)&(spip->device->SPI_TDR);
 
   xdmacChannelSetInterruptCauses(spip->dma_send_channel,
@@ -363,11 +340,9 @@ static void spi_lld_send_dma_func(void *param, uint32_t flags)
           (samv71_xdmac_linked_list_base_t*)&(spip->dma_recv_descriptors[1])) {
         //the second half just completed, working on the first half again.
         __spi_isr_full_code(spip);
-        SCB_CleanDCache_by_Addr_Unaligned((uint32_t*)(spip->txbuf + spip->block1_size), spip->block2_size);
       } else {
         //the first half just completed, working on the second half again.
         __spi_isr_half_code(spip);
-        SCB_CleanDCache_by_Addr((uint32_t*)spip->txbuf, spip->block1_size);
       }
     } else {
       __spi_isr_complete_code(spip)
@@ -398,19 +373,12 @@ static void spi_lld_recv_dma_func(void *param, uint32_t flags)
       if (xdmacChannelGetNextDescriptor(spip->dma_recv_channel) ==
           (samv71_xdmac_linked_list_base_t*)&(spip->dma_recv_descriptors[1])) {
         //the second half just completed, working on the first half again.
-        SCB_InvalidateDCache_by_Addr_Unaligned((uint32_t*)(spip->rxbuf + spip->block1_size), spip->block2_size);
         __spi_isr_full_code(spip);
-        if (spip->txbuf)
-          SCB_CleanDCache_by_Addr_Unaligned((uint32_t *)(spip->txbuf + spip->block1_size), spip->block2_size);
       } else {
         //the first half just completed, working on the second half again.
-        SCB_InvalidateDCache_by_Addr(spip->rxbuf, spip->block1_size + spip->block2_size);
         __spi_isr_half_code(spip);
-        if (spip->txbuf)
-          SCB_CleanDCache_by_Addr((uint32_t *)spip->txbuf, spip->block1_size);
       }
     } else {
-      SCB_InvalidateDCache_by_Addr(spip->rxbuf, spip->block1_size + spip->block2_size);
       __spi_isr_complete_code(spip)
     }
   }
@@ -677,7 +645,6 @@ msg_t spi_lld_ignore(SPIDriver *spip, size_t n) {
  */
 msg_t spi_lld_exchange(SPIDriver *spip, size_t n,
                        const void *txbuf, void *rxbuf) {
-  osalDbgCheck(CHECK_CACHE_ALIGNED(rxbuf));
   uint32_t active_csr = spip->config->slave_configs[spip->active_slave_config].csr;
   uint32_t dwidth = (active_csr & SPI_CSR_BITS_Msk) > SPI_CSR_BITS_8_BIT ?
                     XDMAC_CC_DWIDTH_HALFWORD : XDMAC_CC_DWIDTH_BYTE;
@@ -785,7 +752,6 @@ msg_t spi_lld_send(SPIDriver *spip, size_t n, const void *txbuf) {
  * @notapi
  */
 msg_t spi_lld_receive(SPIDriver *spip, size_t n, void *rxbuf) {
-  osalDbgCheck(CHECK_CACHE_ALIGNED(rxbuf));
   uint32_t active_csr = spip->config->slave_configs[spip->active_slave_config].csr;
   uint32_t dwidth = (active_csr & SPI_CSR_BITS_Msk) > SPI_CSR_BITS_8_BIT ?
                     XDMAC_CC_DWIDTH_HALFWORD : XDMAC_CC_DWIDTH_BYTE;

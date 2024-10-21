@@ -18,6 +18,19 @@
  * @file    QSPIv1/hal_wspi_lld.h
  * @brief   SAMV71 WSPI subsystem low level driver header.
  *
+ * When using this driver with cache enabled, remember to invalidate and clean
+ * the affected memory regions as needed. The XDMAC descriptors are handled
+ * internally.
+ *
+ * SCB_CleanDCache_by_Addr((uint32_t*)send_buf, size);
+ * wspiSend/wspiReceive();
+ * SCB_InvalidateDCache_by_addr((uint32_t*)recv_buf, size);
+ *
+ * On the receive buffer side, there is a risk of invalidating "live" data in
+ * the same cache line; this can be avoided by aligning the beginning of the
+ * receive buffer to 32 bytes and sizeing it so that it occopies a whole
+ * number of 32 byte cache lines.
+ *
  * @addtogroup WSPI
  * @{
  */

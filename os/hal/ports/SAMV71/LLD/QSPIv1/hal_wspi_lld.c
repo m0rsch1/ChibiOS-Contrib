@@ -54,20 +54,6 @@ WSPIDriver WSPID1;
 /* Driver local functions.                                                   */
 /*===========================================================================*/
 
-static void SCB_InvalidateDCache_by_Addr_Unaligned(uint32_t *x, size_t n) {
-  size_t mask = ~(CACHE_LINE_SIZE-1);
-  uintptr_t begin = ((uintptr_t)x) & mask;
-  uintptr_t end = (((uintptr_t)x) + n + CACHE_LINE_SIZE-1) & mask;
-  SCB_InvalidateDCache_by_Addr((uint32_t*)begin, end - begin);
-}
-
-static void SCB_CleanDCache_by_Addr_Unaligned(uint32_t *x, size_t n) {
-  size_t mask = ~(CACHE_LINE_SIZE-1);
-  uintptr_t begin = ((uintptr_t)x) & mask;
-  uintptr_t end = (((uintptr_t)x) + n + CACHE_LINE_SIZE-1) & mask;
-  SCB_CleanDCache_by_Addr((uint32_t*)begin, end - begin);
-}
-
 /**
  * @brief   Shared service routine.
  *
@@ -98,8 +84,6 @@ static void wspi_lld_dma_func(void *param, uint32_t flags) {
 
   if(wspip->state == WSPI_SEND || wspip->state == WSPI_RECEIVE) {
     wspip->qspi->QSPI_CR = QSPI_CR_LASTXFER;
-    if(wspip->rxbuf)
-      SCB_InvalidateDCache_by_Addr_Unaligned(wspip->rxbuf, wspip->size);
     _wspi_isr_code(wspip);
   }
 
@@ -340,7 +324,6 @@ void wspi_lld_send(WSPIDriver *wspip, const wspi_command_t *cmdp,
 
   wspip->qspi->QSPI_IER = QSPI_IDR_INSTRE;
 
-  SCB_CleanDCache_by_Addr_Unaligned((uint32_t*)txbuf, n);
   wspip->rxbuf = NULL;
   wspip->size = n;
 

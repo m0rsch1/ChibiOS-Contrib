@@ -18,6 +18,23 @@
  * @file    hal_spi_lld.h
  * @brief   SAMV71 spi subsystem low level driver header.
  *
+ * When using this driver with cache enabled, remember to invalidate and clean
+ * the affected memory regions as needed. The XDMAC descriptors are handled
+ * internally.
+ *
+ * SCB_CleanDCache_by_Addr((uint32_t*)send_buf, size);
+ * spiExchange/spiSend/SpiReceive();
+ * SCB_InvalidateDCache_by_addr((uint32_t*)recv_buf, size);
+ *
+ * Also remember to do this in the callback for the receive side, and, when
+ * using circular buffers, before reading the filled data and after filling the
+ * to-be-sent data.
+ *
+ * On the receive buffer side, there is a risk of invalidating "live" data in
+ * the same cache line; this can be avoided by aligning the beginning of the
+ * receive buffer to 32 bytes and sizeing it so that it occopies a whole
+ * number of 32 byte cache lines.
+ *
  * @addtogroup SPI
  * @{
  */
