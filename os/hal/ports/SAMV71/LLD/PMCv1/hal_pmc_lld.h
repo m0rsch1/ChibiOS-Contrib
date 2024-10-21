@@ -3,6 +3,10 @@
 #include "hal.h"
 #include "samv71.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 uint32_t pmc_enable_periph_clk(uint32_t ul_id);
 uint32_t pmc_disable_periph_clk(uint32_t ul_id);
 
@@ -34,3 +38,7 @@ uint32_t pmc_disable_utmi_clk(void);
  *                  PLL frequency multiplication of x40 and x30.
  */
 uint32_t pmc_configure_utmi_clk(uint32_t freq_mode);
+
+#ifdef __cplusplus
+}
+#endif
