@@ -314,6 +314,25 @@ static void spi_lld_serve_spi_interrupt(SPIDriver *spip)
     /* Reporting the failure.*/
     __spi_isr_error_code(spip, HAL_RET_HW_FAILURE);
   }
+  if((sr & SPI_SR_TXEMPTY) != 0) {
+    spip->device->SPI_IDR = SPI_IDR_TXEMPTY;
+    if (spip->state == SPI_ACTIVE) {
+      if (spip->config->circular) {
+        //figure out which half we are in. if the next descriptor is #1,
+        //we are in the first and vice versa.
+        if (xdmacChannelGetNextDescriptor(spip->dma_recv_channel) ==
+            (samv71_xdmac_linked_list_base_t *) & (spip->dma_recv_descriptors[1])) {
+          //the second half just completed, working on the first half again.
+          __spi_isr_full_code(spip);
+        } else {
+          //the first half just completed, working on the second half again.
+          __spi_isr_half_code(spip);
+        }
+      } else {
+        __spi_isr_complete_code(spip)
+      }
+    }
+  }
 }
 
 /**
@@ -333,20 +352,7 @@ static void spi_lld_send_dma_func(void *param, uint32_t flags)
   }
   if ((flags & (XDMAC_CIS_BIS | XDMAC_CIS_LIS)) != 0 &&
       spip->state == SPI_ACTIVE) {
-    if (spip->config->circular) {
-      //figure out which half we are in. if the next descriptor is #1,
-      //we are in the first and vice versa.
-      if (xdmacChannelGetNextDescriptor(spip->dma_recv_channel) ==
-          (samv71_xdmac_linked_list_base_t*)&(spip->dma_recv_descriptors[1])) {
-        //the second half just completed, working on the first half again.
-        __spi_isr_full_code(spip);
-      } else {
-        //the first half just completed, working on the second half again.
-        __spi_isr_half_code(spip);
-      }
-    } else {
-      __spi_isr_complete_code(spip)
-    }
+    spip->device->SPI_IER = SPI_IER_TXEMPTY;
   }
 }
 
