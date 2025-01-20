@@ -640,6 +640,8 @@ void pwm_lld_disable_channel_notification(PWMDriver *pwmp,
  * @pre     The channel must have been activated using @p pwmEnableChannel().
  * @note    The actual direction has effect immediately, the fact if it is
  *          overriden has effect at the next cycle start.
+ * @note    For already enabled channels, pwmCommitForceMode must be called
+ *          after all changes for this pwm cycle are complete
  *
  * @param[in] pwmp          pointer to a @p PWMDriver object
  * @param[in] channel       PWM channel identifier (0...channels-1)
@@ -648,33 +650,57 @@ void pwm_lld_disable_channel_notification(PWMDriver *pwmp,
 void pwmSetChannelForceMode(PWMDriver *pwmp,
                         pwmchannel_t channel,
                         pwmchannelforce_t force_setting) {
-  osalDbgAssert(channel <= pwmp->channels, "Channel number out of range");
-  channel += pwmp->base_channel;
-  uint32_t os_set = (force_setting & (PWM_OS_OSH0 | PWM_OS_OSL0)) << channel;
-  uint32_t os_clear = (~force_setting & (PWM_OS_OSH0 | PWM_OS_OSL0)) << channel;
+  osalDbgAssert(channel + pwmp->base_channel <= pwmp->channels, "Channel number out of range");
+  //update the target state register
+  uint32_t os_set = (force_setting & (PWM_OS_OSH0 | PWM_OS_OSL0)) << (channel + pwmp->base_channel);
+  uint32_t os_clear = (~force_setting & (PWM_OS_OSH0 | PWM_OS_OSL0)) << (channel + pwmp->base_channel);
   pwmp->os_reg |= os_set;
   pwmp->os_reg &= ~os_clear;
+  //generate new os_set/_clear from the target state and the current state
   os_set = pwmp->os_reg & ~pwmp->device->PWM_OS;
   os_clear = ~pwmp->os_reg & pwmp->device->PWM_OS;
   //avoid changing the output override value when it is not being used
   //this avoids toggling the value when it probably still is in use, but no
   //value is set from the force setting, while the selection only takes effect
   //later
-  uint32_t oov_mask = os_set;
+  uint32_t oov_mask = pwmp->os_reg;
   uint32_t oov = pwmp->device->PWM_OOV;
   oov &= ~oov_mask;
-  oov |= (force_setting >> (8-channel)) & oov_mask;
+  oov |= (force_setting >> (8 - channel - pwmp->base_channel)) & oov_mask;
   pwmp->device->PWM_OOV = oov;
-  if(pwmIsChannelEnabled(pwmp,channel)) {
-    //It seems like the device does not like to have both OSSUPD and OSCUPD set in the same cycle
-    if (os_set)
-      pwmp->device->PWM_OSSUPD = os_set;
-    if (os_clear && !os_set)
-      pwmp->device->PWM_OSCUPD = os_clear;
-  } else {
+  if (!pwmIsChannelEnabled(pwmp, channel)) {
     pwmp->device->PWM_OSS = os_set;
     pwmp->device->PWM_OSC = os_clear;
   }
+}
+
+/**
+ * @brief   Sends the output drive forced state setting to the device for
+ *          enabled channels
+ * @pre     The PWM unit must have been activated using @p pwmStart().
+ * @note    If force flags are cleared and set in the same cycle,
+ *          only the sets take effect. This function must be called
+ *          again in the next cycle to apply the clears.
+ *
+ * @param[in] pwmp          pointer to a @p PWMDriver object
+ */
+void pwmCommitForceMode(PWMDriver *pwmp) {
+  /* The device does not like to have OSCUPD and OSSUPD set in the same
+   * pwm cycle, so we collect all changes and try to commit what is left
+   * afterwards, avoiding trying to clear/set bits that will be changed later
+   * and maybe lost.
+   *
+   * Any bits in OSCUPD are ignored when bits in OSSUPD were set.
+   */
+  uint32_t os_set = pwmp->os_reg & ~pwmp->device->PWM_OS;
+  uint32_t os_clear = ~pwmp->os_reg & pwmp->device->PWM_OS;
+  uint32_t os_enabled_mask = (PWM_OS_OSH0 | PWM_OS_OSL0) * pwmp->device->PWM_SR;
+  os_set &= os_enabled_mask;
+  os_clear &= os_enabled_mask;
+  if (os_set)
+    pwmp->device->PWM_OSSUPD = os_set;
+  if (os_clear)
+    pwmp->device->PWM_OSCUPD = os_clear;
 }
 
 /**

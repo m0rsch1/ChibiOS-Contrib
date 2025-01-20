@@ -366,6 +366,7 @@ extern "C" {
   void pwmSetChannelMode(PWMDriver *pwmp,
                          pwmchannel_t channel,
                          pwmmode_t mode);
+  void pwmCommitForceMode(PWMDriver *pwmp);
 
 #ifdef __cplusplus
 }
