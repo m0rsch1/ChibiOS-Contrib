@@ -549,8 +549,6 @@ void pwm_lld_enable_channel(PWMDriver *pwmp,
   pwmChangeChannel(pwmp, channel, width);
   if (pwmp->config->channels[channel].mode != PWM_OUTPUT_DISABLED) {
     pwmp->device->PWM_ENA = PWM_ENA_CHID0 << (channel + pwmp->base_channel);
-    if (!pwmp->config->manual_updates)
-      pwmTriggerSynchUpdate(pwmp);
   }
 }
 
@@ -693,38 +691,16 @@ void pwmSetChannelMode(PWMDriver *pwmp,
                        pwmmode_t mode) {
   osalDbgCheck(channel < pwmp->channels);
   osalDbgCheck(channel < 4);
-  //This should allow the compiler to optimize the register access to
-  //offset+channel*0x20, since all relevant cases follow that pattern.
   if(channel >= 4)
     return;
   if (pwmIsChannelEnabled(pwmp,channel)) {
-    volatile uint32_t *reg = NULL;
-    switch (channel) {
-      /*
-      case 0:
-        reg = &pwmp->device->PWM_CMUPD0;
-        break;
-      case 1:
-        reg = &pwmp->device->PWM_CMUPD1;
-        break;
-      case 2:
-        reg = &pwmp->device->PWM_CMUPD2;
-        break;
-      case 3:
-        reg = &pwmp->device->PWM_CMUPD3;
-        break;
-        */
-      default:
-        reg = (&pwmp->device->PWM_CMUPD0) + channel*(0x20/sizeof(uint32_t));
-        break;
-    }
+    volatile uint32_t *reg = (&pwmp->device->PWM_CMUPD0) +
+                             (channel + pwmp->base_channel) * (0x20 / sizeof(uint32_t));
     if (mode == PWM_OUTPUT_ACTIVE_LOW) {
-      *reg |= PWM_CMUPD0_CPOLUP;
+      *reg = PWM_CMUPD0_CPOLUP;
     } else {
-      *reg &= ~PWM_CMUPD0_CPOLUP;
+      *reg = 0;
     }
-    if (!pwmp->config->manual_updates)
-      pwmTriggerSynchUpdate(pwmp);
   } else {
     if (mode == PWM_OUTPUT_ACTIVE_LOW) {
       pwmp->device->PWM_CH_NUM[channel + pwmp->base_channel].PWM_CMR |=
