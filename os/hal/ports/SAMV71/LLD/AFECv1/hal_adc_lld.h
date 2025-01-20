@@ -141,7 +141,7 @@ typedef uint32_t adcerror_t;
   uint8_t last_channel;                                                       \
   size_t current_pos;                                                         \
   const samv71_xdmac_channel_t* dma_channel;                                  \
-  uint8_t dma_descriptors_buf[sizeof(samv71_xdmac_linked_list_view_0_t)*2+31];\
+  uint8_t dma_descriptors_buf[CACHE_ALIGNABLE_ALLOC_SIZE(sizeof(samv71_xdmac_linked_list_view_0_t)*2)];\
   samv71_xdmac_linked_list_view_0_t *dma_descriptors
 
 /**

@@ -98,6 +98,19 @@ typedef struct {
 
 #define CHECK_CACHE_ALIGNED(x) (((uintptr_t)(x) & (CACHE_LINE_SIZE-1)) == 0)
 #define CACHE_ALIGN(x) ((((uintptr_t)(x) & (CACHE_LINE_SIZE-1)) == 0)?(uintptr_t)(x):(((uintptr_t)(x)+(CACHE_LINE_SIZE-1)) & ~(CACHE_LINE_SIZE-1)))
+/*
+ * assuming CACHE_LINE_SIZE == 32
+ * a 1 byte sized data structure needs a buffer of 32 aligned bytes. the worst
+ *    case would be a buffer aligned 1 byte past a alignment boundary, so the
+ *     allocation must be 63 bytes so one aligned 32 byte slice can be used)
+ * this works up to 32 bytes sized data structures, then another 32 bytes
+ * need to be added, and so on.
+ *
+ * we need to round up the size to the next CACHE_LINE_SIZE, then add another
+ * CACHE_LINE_SIZE-1.
+ */
+#define CACHE_ALIGNABLE_ALLOC_SIZE(n) ((((n)-1)|(CACHE_LINE_SIZE - 1)) + CACHE_LINE_SIZE)
+#define CACHE_ALIGNABLE_ALLOC_TYPEDSIZE(t, n) ((((sizeof(t) * (n) - 1)|(CACHE_LINE_SIZE - 1)|(sizeof(t)-1)) + CACHE_LINE_SIZE)/sizeof(t) + 1U)
 
 /*===========================================================================*/
 /* External declarations.                                                    */

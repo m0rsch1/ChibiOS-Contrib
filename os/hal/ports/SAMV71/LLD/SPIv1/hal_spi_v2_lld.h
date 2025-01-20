@@ -163,8 +163,8 @@ typedef struct hal_spi_lld_slave_config {
   uint8_t dma_recv_hwid;                                                   \
   uint8_t dma_send_hwid;                                                   \
   uint8_t active_slave_config;                                             \
-  uint8_t dma_recv_descriptors_buf[sizeof(samv71_xdmac_linked_list_view_0_t)*2+CACHE_LINE_SIZE-1]; \
-  uint8_t dma_send_descriptors_buf[sizeof(samv71_xdmac_linked_list_view_0_t)*2+CACHE_LINE_SIZE-1]; \
+  uint8_t dma_recv_descriptors_buf[CACHE_ALIGNABLE_ALLOC_SIZE(sizeof(samv71_xdmac_linked_list_view_0_t)*2)]; \
+  uint8_t dma_send_descriptors_buf[CACHE_ALIGNABLE_ALLOC_SIZE(sizeof(samv71_xdmac_linked_list_view_0_t)*2)]; \
   size_t block1_size;                                                      \
   size_t block2_size;                                                      \
   const void *txbuf;                                                       \
