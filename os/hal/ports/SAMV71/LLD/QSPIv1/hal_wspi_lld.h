@@ -55,12 +55,12 @@
 /**
  * @name    Transfer options
  * @note    The low level driver has the option to override the following
- *          definitions and use its own ones. In must take care to use
+ *          definitions and use its own ones. It must take care to use
  *          the same name for the same function or compatibility is not
  *          ensured.
  * @note    There are the following limitations in this implementation:
  *          - Eight lines are not supported.
- *          - Only 8 bits instructions are supported.
+ *          - Only 8 bit instructions are supported.
  *          - Alt field can be 1,2,4,8 bits.
  *          - Address field can be 24 or 32 bits.
  *          - Address and Alt fields must use the same number of lanes,
@@ -68,29 +68,40 @@
  *            lanes used by data
  *          - If the command field uses multiple lanes, it must match the
  *            number of lanes used by data, address and alt
- *          .
+ *          - Double Transfer Rate can only be enabled for data, address and
+ *            alt or for data, address, alt and command
  * @{
  */
 /*
  * used cfg bits:
  * 31                                       0
- * .... ....  .... ....  .... .xxx  xxxx ....
+ * .... ....  .... ....  xx.. .xxx  xxxx ....    used QSPI_IFR register bits
+ * .... ....  ...x xxxx    xx            .xxx    QSPI_IFR register bits filled
+ *                                               by other means
+ * xxxx x.x.  xxx. ....  .... x...  .... x       undefined QSPI_IFR bits
+ *
  * .... ....  .... ....  .... ....  ...x ....    QSPI_IFR_INSTEN
  * .... ....  .... ....  .... ....  ..x. ....    QSPI_IFR_ADDREN
  * .... ....  .... ....  .... ....  .x.. ....    QSPI_IFR_OPTEN
  * .... ....  .... ....  .... ....  x... ....    QSPI_IFR_DATAEN
- * .... ....  .... ....  .... .x..  .... ....    QSPI_IFR_ADDRL
  * .... ....  .... ....  .... ..xx  .... ....    QSPI_IFR_OPTL_Msk
- * .... ....  .xxx ....  .... ....  .... ....    cmd line compatibility mask
- * .... ..xx  x... ....  .... ....  .... ....    addr line compatibility mask
- * ...x xx..  .... ....  .... ....  .... ....    alt line compatibility mask
+ * .... ....  .... ....  .... .x..  .... ....    QSPI_IFR_ADDRL
+ * .... ....  .... ....  ...x ....  .... ....    memory or register access mode
+ *                                               allows enabling scrambler
+ * .... ....  .... ....  .x.. ....  .... ....    QSPI_IFR_CRM
+ * .... ....  .... ....  x... ....  .... ....    QSPI_IFR_DDREN
+ * .... ....  .... xxx.  .... ....  .... ....    cmd line compatibility mask
+ * .... ....  .xxx ....  .... ....  .... ....    addr line compatibility mask
+ * .... ..xx  x... ....  .... ....  .... ....    alt line compatibility mask
+ * .... .x..  .... ....  .... ....  .... ....    QSPI_IFR_DDRCMDEN
  * xxx. ....  .... ....  .... ....  .... ....    data line compatibility mask
 */
 
-#define WSPI_LLD_CFG_CMD_MODE_COMPAT_Pos 20LU
-#define WSPI_LLD_CFG_ADDR_MODE_COMPAT_Pos 23LU
-#define WSPI_LLD_CFG_ALT_MODE_COMPAT_Pos 26LU
+#define WSPI_LLD_CFG_CMD_MODE_COMPAT_Pos 17LU
+#define WSPI_LLD_CFG_ADDR_MODE_COMPAT_Pos 20LU
+#define WSPI_LLD_CFG_ALT_MODE_COMPAT_Pos 23LU
 #define WSPI_LLD_CFG_DATA_MODE_COMPAT_Pos 29LU
+#define WSPI_LLD_CFG_TYPE_Pos 12LU
 
 #define WSPI_CFG_CMD_MODE_MASK              ((7LU << WSPI_LLD_CFG_CMD_MODE_COMPAT_Pos) | QSPI_IFR_INSTEN)
 #define WSPI_CFG_CMD_MODE_NONE              (7LU << WSPI_LLD_CFG_CMD_MODE_COMPAT_Pos)
@@ -128,6 +139,24 @@
 #define WSPI_CFG_DATA_MODE_ONE_LINE         ((1LU << WSPI_LLD_CFG_DATA_MODE_COMPAT_Pos) | QSPI_IFR_DATAEN)
 #define WSPI_CFG_DATA_MODE_TWO_LINES        ((2LU << WSPI_LLD_CFG_DATA_MODE_COMPAT_Pos) | QSPI_IFR_DATAEN)
 #define WSPI_CFG_DATA_MODE_FOUR_LINES       ((4LU << WSPI_LLD_CFG_DATA_MODE_COMPAT_Pos) | QSPI_IFR_DATAEN)
+
+#define WSPI_CFG_SIOO                       QSPI_IFR_CRM_ENABLED
+
+#define WSPI_CFG_CMD_DTR                    QSPI_IFR_DDRCMDEN
+#define WSPI_CFG_ADDR_DTR                   (0)
+#define WSPI_CFG_ALT_DTR                    (0)
+#define WSPI_CFG_DATA_DTR                   QSPI_IFR_DDREN
+
+#define WSPI_CFG_ALL_DTR                    (WSPI_CFG_CMD_DTR   |       \
+                                             WSPI_CFG_ADDR_DTR  |       \
+                                             WSPI_CFG_ALT_DTR   |       \
+                                             WSPI_CFG_DATA_DTR)
+
+#define WSPI_CFG_DQS_ENABLE                 (0)
+
+#define WSPI_LLD_CFG_TYPE_MASK              (1LU << WSPI_LLD_CFG_TYPE_Pos)
+#define WSPI_CFG_TYPE_REGISTER              (0LU << WSPI_LLD_CFG_TYPE_Pos)
+#define WSPI_CFG_TYPE_MEMORY                (1LU << WSPI_LLD_CFG_TYPE_Pos)
 /** @} */
 
 #define QSPI_MAIN_CLK (SystemCoreClock / 2)

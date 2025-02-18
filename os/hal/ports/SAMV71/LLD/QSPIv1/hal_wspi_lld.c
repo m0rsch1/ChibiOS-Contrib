@@ -218,12 +218,14 @@ void wspi_lld_stop(WSPIDriver *wspip) {
 static uint32_t wspi_lld_setup_ifr(uint32_t ifr, uint32_t dummy, uint32_t cfg) {
   ifr &= ~(QSPI_IFR_NBDUM_Msk | QSPI_IFR_WIDTH_Msk | QSPI_IFR_INSTEN |
            QSPI_IFR_ADDREN | QSPI_IFR_OPTEN | QSPI_IFR_DATAEN |
-           QSPI_IFR_TFRTYP_Msk | QSPI_IFR_OPTL_Msk | QSPI_IFR_ADDRL);
+           QSPI_IFR_TFRTYP_Msk | QSPI_IFR_OPTL_Msk | QSPI_IFR_ADDRL |
+          QSPI_IFR_DDRCMDEN | QSPI_IFR_DDREN);
 
   ifr |= QSPI_IFR_NBDUM(dummy);
 
   ifr |= cfg & (WSPI_CFG_ADDR_SIZE_MASK | WSPI_CFG_ALT_SIZE_MASK |
-    QSPI_IFR_INSTEN | QSPI_IFR_ADDREN | QSPI_IFR_OPTEN | QSPI_IFR_DATAEN);
+                QSPI_IFR_INSTEN | QSPI_IFR_ADDREN | QSPI_IFR_OPTEN | QSPI_IFR_DATAEN |
+                QSPI_IFR_CRM | QSPI_IFR_DDRCMDEN | QSPI_IFR_DDREN);
 
   //each of cmd, addr, alt, data mode has either a single bit set in cfg for
   //the compatible line count, or all 3 bits if they are all "compatible",
@@ -305,7 +307,12 @@ void wspi_lld_send(WSPIDriver *wspip, const wspi_command_t *cmdp,
 
   ifr = wspi_lld_setup_ifr(ifr, cmdp->dummy, cmdp->cfg);
 
-  ifr |= QSPI_IFR_TFRTYP_TRSFR_WRITE;
+  if((cmdp->cfg & WSPI_LLD_CFG_TYPE_MASK) == WSPI_CFG_TYPE_REGISTER) {
+    ifr |= QSPI_IFR_TFRTYP_TRSFR_WRITE;
+  } else {
+    //enables the scrambler if configured, no difference otherwise.
+    ifr |= QSPI_IFR_TFRTYP_TRSFR_WRITE_MEMORY;
+  }
 
   wspip->qspi->QSPI_IFR = ifr;
 
@@ -373,7 +380,12 @@ void wspi_lld_receive(WSPIDriver *wspip, const wspi_command_t *cmdp,
 
   ifr = wspi_lld_setup_ifr(ifr, cmdp->dummy, cmdp->cfg);
 
-  ifr |= QSPI_IFR_TFRTYP_TRSFR_READ;
+  if((cmdp->cfg & WSPI_LLD_CFG_TYPE_MASK) == WSPI_CFG_TYPE_REGISTER) {
+    ifr |= QSPI_IFR_TFRTYP_TRSFR_READ;
+  } else {
+    //enables the scrambler if configured and allows non-linear reads
+    ifr |= QSPI_IFR_TFRTYP_TRSFR_READ_MEMORY;
+  }
 
   wspip->qspi->QSPI_IFR = ifr;
 
