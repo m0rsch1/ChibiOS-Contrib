@@ -174,7 +174,7 @@ void wspi_lld_start(WSPIDriver *wspip) {
   wspip->qspi->QSPI_MR = QSPI_MR_SMM_MEMORY |
                          QSPI_MR_CSMODE_LASTXFER | // forced by hardware
                          wspip->config->mr;
-  uint32_t scbr = (QSPI_MAIN_CLK + wspip->config->speed)/wspip->config->speed;
+  uint32_t scbr = (QSPI_MAIN_CLK + wspip->config->speed)/wspip->config->speed - 1;
   wspip->qspi->QSPI_SCR = wspip->config->scr |
                           QSPI_SCR_SCBR(scbr);
 
