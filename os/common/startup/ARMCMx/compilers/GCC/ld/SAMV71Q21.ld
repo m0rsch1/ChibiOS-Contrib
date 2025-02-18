@@ -56,7 +56,7 @@ SEARCH_DIR(.)
 MEMORY
 {
   flash0 (RX) : org = 0x00400000, len = 2M        /* Flash as AXIM (writable) */
-  flash1 (X)  : org = 0x00800000, len = 2M        /* Flash as ROM: Contains SA-BOOT code etc. length is unknown actually*/
+  flash1 (X)  : org = 0x00800000, len = 8k        /* Flash as ROM: Contains SA-BOOT code etc. length is unknown actually*/
   flash2 (RX) : org = 0x00000000, len = 0
   flash3 (RX) : org = 0x00000000, len = 0
   flash4 (RX) : org = 0x00000000, len = 0
