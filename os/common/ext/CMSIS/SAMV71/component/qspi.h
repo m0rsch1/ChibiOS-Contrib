@@ -201,9 +201,15 @@ typedef struct {
 #define QSPI_IFR_CRM (0x1u << 14) /**< \brief (QSPI_IFR) Continuous Read Mode */
 #define   QSPI_IFR_CRM_DISABLED (0x0u << 14) /**< \brief (QSPI_IFR) The Continuous Read mode is disabled. */
 #define   QSPI_IFR_CRM_ENABLED (0x1u << 14) /**< \brief (QSPI_IFR) The Continuous Read mode is enabled. */
+#define QSPI_IFR_DDREN (0x1u << 15) /**< \brief (QSPI_IFR) DDR Mode Enable */
+#define   QSPI_IFR_DDREN_DISABLED (0x0u << 15) /**< \brief (QSPI_IFR) Transfers are performed in Single Data Rate mode. */
+#define   QSPI_IFR_DDREN_ENABLED (0x1u << 15) /**< \brief (QSPI_IFR) Transfers are performed in Double Data Rate mode, whereas the instruction field is still transferred in Single Data Rate mode. */
 #define QSPI_IFR_NBDUM_Pos 16
 #define QSPI_IFR_NBDUM_Msk (0x1fu << QSPI_IFR_NBDUM_Pos) /**< \brief (QSPI_IFR) Number Of Dummy Cycles */
 #define QSPI_IFR_NBDUM(value) ((QSPI_IFR_NBDUM_Msk & ((value) << QSPI_IFR_NBDUM_Pos)))
+#define QSPI_IFR_DDRCMDEN (0x1u << 26) /**< \brief (QSPI_IFR) DDR Mode Command Enable */
+#define   QSPI_IFR_DDRCMDEN_DISABLED (0x0u << 26) /**< \brief (QSPI_IFR) Transfer of instruction field is performed in Single Data Rate mode even if the DDREN bit is written to '1'. */
+#define   QSPI_IFR_DDRCMDEN_ENABLED (0x1u << 26) /**< \brief (QSPI_IFR) Transfer of instruction field is performed in Double Data Rate mode if the DDREN bit is written to '1'. If the DDREN bit is written to '0', the instruction field is sent in Single Data Rate mode. */
 /* -------- QSPI_SMR : (QSPI Offset: 0x40) Scrambling Mode Register -------- */
 #define QSPI_SMR_SCREN (0x1u << 0) /**< \brief (QSPI_SMR) Scrambling/Unscrambling Enable */
 #define   QSPI_SMR_SCREN_DISABLED (0x0u << 0) /**< \brief (QSPI_SMR) The scrambling/unscrambling is disabled. */
