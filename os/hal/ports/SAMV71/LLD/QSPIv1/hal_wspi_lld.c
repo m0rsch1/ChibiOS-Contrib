@@ -64,11 +64,25 @@ static void wspi_lld_serve_interrupt(WSPIDriver *wspip) {
 
   sr = wspip->qspi->QSPI_SR;
 
+  /* Serial memory mode status bits: */
   if(sr & QSPI_SR_INSTRE) {
-    _wspi_isr_code(wspip);
+    if (wspip->state == WSPI_SEND || wspip->state == WSPI_RECEIVE) {
+      wspip->state = WSPI_COMPLETE;
+      _wspi_isr_code(wspip);
+    }
   }
 
-  /* TODO errors handling.*/
+  /* SPI mode status bits:
+   * QSPI_SR_CSS: chip select status, used in slave mode
+   * QSPI_SR_CSR: chip select rise since last SR read, used in slave mode
+   * QSPI_SR_OVRES: set when QSPI_RDR has been written at least twice without
+   * reading either RDR or SR
+   * QSPI_SR_TXEMPTY: set when QSPI_TDR and the internal shifter are empty
+   * QSPI_SR_TDRE: set when QSPI_TDR is empty
+   * QSPI_SR_RDRF: set when data is ready for reading in QSPI_RDR
+   */
+
+  /* There are no error status bits */
 }
 
 /**
@@ -84,18 +98,11 @@ static void wspi_lld_dma_func(void *param, uint32_t flags) {
 
   if(wspip->state == WSPI_SEND || wspip->state == WSPI_RECEIVE) {
     wspip->qspi->QSPI_CR = QSPI_CR_LASTXFER;
+    wspip->state = WSPI_COMPLETE;
     _wspi_isr_code(wspip);
   }
 
 #if 0
-  if (((flags & STM32_MDMA_CISR_CTCIF) != 0U) &&
-      (wspip->state == WSPI_RECEIVE)) {
-    /* Portable WSPI ISR code defined in the high level driver, note, it is
-     a macro.*/
-    _wspi_isr_code(wspip);
-
-    mdmaChannelDisableX(wspip->mdma);
-  }
   /* DMA errors handling.*/
 #if defined(STM32_WSPI_MDMA_ERROR_HOOK)
   else if ((flags & STM32_MDMA_CISR_TEIF) != 0) {
@@ -331,9 +338,6 @@ void wspi_lld_send(WSPIDriver *wspip, const wspi_command_t *cmdp,
 
   wspip->qspi->QSPI_IER = QSPI_IDR_INSTRE;
 
-  wspip->rxbuf = NULL;
-  wspip->size = n;
-
   xdmacChannelSetInterruptCauses(wspip->dma_channel,
                                  XDMAC_CIE_LIE | XDMAC_CIE_RBIE |
                                  XDMAC_CIE_WBIE | XDMAC_CIE_ROIE);
@@ -403,9 +407,6 @@ void wspi_lld_receive(WSPIDriver *wspip, const wspi_command_t *cmdp,
   }
 
   wspip->qspi->QSPI_IER = QSPI_IDR_INSTRE;
-
-  wspip->rxbuf = rxbuf;
-  wspip->size = n;
 
   xdmacChannelSetInterruptCauses(wspip->dma_channel,
                                  XDMAC_CIE_LIE | XDMAC_CIE_RBIE |
