@@ -22,9 +22,9 @@
  * the affected memory regions as needed. The XDMAC descriptors are handled
  * internally.
  *
- * SCB_CleanDCache_by_Addr((uint32_t*)send_buf, size);
+ * DCACHE_WRITE_BACK(send_buf, size);
  * wspiSend/wspiReceive();
- * SCB_InvalidateDCache_by_addr((uint32_t*)recv_buf, size);
+ * DCACHE_INVALIDATE_FOR_READ(recv_buf, size);
  *
  * On the receive buffer side, there is a risk of invalidating "live" data in
  * the same cache line; this can be avoided by aligning the beginning of the

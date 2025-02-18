@@ -127,7 +127,7 @@ static void adc_lld_dma_func(void *param, uint32_t flags) {
     size_t block2_count = sample_count - block1_count;
     if((flags & (XDMAC_CIS_RBEIS | XDMAC_CIS_WBEIS | XDMAC_CIS_ROIS)) != 0 &&
             adcp->state == ADC_ACTIVE) {
-        SCB_InvalidateDCache_by_Addr((uint32_t *) adcp->samples, sample_count * 2);
+        DCACHE_INVALIDATE_FOR_READ_ALIGNED(adcp->samples, sample_count * sizeof(adcsample_t));
         //this calls adc_lld_stop_conversion
         _adc_isr_error_code(adcp, ADC_ERR_DMAFAILURE);
     }
@@ -142,11 +142,11 @@ static void adc_lld_dma_func(void *param, uint32_t flags) {
         if(xdmacChannelGetNextDescriptor(adcp->dma_channel) ==
                 (samv71_xdmac_linked_list_base_t*)&adcp->dma_descriptors[1] ||
                 (flags & XDMAC_CIS_LIS) != 0) {
-            SCB_InvalidateDCache_by_Addr((uint32_t *) (adcp->samples + block1_count), block2_count * 2);
+            DCACHE_INVALIDATE_FOR_READ(adcp->samples + block1_count, block2_count * sizeof(adcsample_t));
             //this may call adc_lld_stop_conversion
             _adc_isr_full_code(adcp);
         } else {
-            SCB_InvalidateDCache_by_Addr((uint32_t *) adcp->samples, block1_count * 2);
+            DCACHE_INVALIDATE_FOR_READ_ALIGNED(adcp->samples, block1_count * sizeof(adcsample_t));
             //this may call adc_lld_stop_conversion
             _adc_isr_half_code(adcp);
         }
@@ -190,13 +190,13 @@ void adc_lld_init(void) {
   /* Driver initialization.*/
   adcObjectInit(&ADCD0);
   ADCD0.device = AFEC0;
-  ADCD0.dma_descriptors = (samv71_xdmac_linked_list_view_0_t *)CACHE_ALIGN(ADCD0.dma_descriptors_buf);
+  ADCD0.dma_descriptors = (samv71_xdmac_linked_list_view_0_t *)CACHE_ALIGN_AFTER(ADCD0.dma_descriptors_buf);
 #endif
 #if SAMV71_ADC_USE_ADC1 == TRUE
   /* Driver initialization.*/
   adcObjectInit(&ADCD1);
   ADCD1.device = AFEC1;
-  ADCD1.dma_descriptors = (samv71_xdmac_linked_list_view_0_t *)CACHE_ALIGN(ADCD1.dma_descriptors_buf);
+  ADCD1.dma_descriptors = (samv71_xdmac_linked_list_view_0_t *)CACHE_ALIGN_AFTER(ADCD1.dma_descriptors_buf);
 #endif
 }
 
@@ -398,7 +398,7 @@ void adc_lld_start_conversion(ADCDriver *adcp) {
     size_t block2_count = sample_count-block1_count;
 
     //At least try to keep the memory adjacent to the samples alive
-    SCB_CleanDCache_by_Addr((uint32_t *) adcp->samples, sample_count * 2);
+    DCACHE_WRITE_BACK(adcp->samples, sample_count * sizeof(adcsample_t));
 
     adcp->dma_descriptors[0].XDMAC_MBR_NDA =
             (samv71_xdmac_linked_list_base_t*)&adcp->dma_descriptors[1];
@@ -417,7 +417,7 @@ void adc_lld_start_conversion(ADCDriver *adcp) {
       adcp->dma_descriptors[1].XDMAC_MBR_UBC |= XDMAC_MBR_UBC_NDE;
 
     //After configuring the descriptors, make sure the XDMAC can see them in memory.
-    SCB_CleanDCache_by_Addr((uint32_t *) adcp->dma_descriptors, sizeof(adcp->dma_descriptors));
+    DCACHE_WRITE_BACK_ALIGNED(adcp->dma_descriptors, sizeof(adcp->dma_descriptors));
 
     xdmacChannelSetSource(adcp->dma_channel,&(adcp->device->AFEC_LCDR));
     xdmacChannelSetDestination(adcp->dma_channel, adcp->samples);

@@ -22,9 +22,9 @@
  * the affected memory regions as needed. The XDMAC descriptors are handled
  * internally.
  *
- * SCB_CleanDCache_by_Addr((uint32_t*)send_buf, size);
+ * DCACHE_WRITE_BACK(send_buf, size);
  * spiExchange/spiSend/SpiReceive();
- * SCB_InvalidateDCache_by_addr((uint32_t*)recv_buf, size);
+ * DCACHE_INVALIDATE_FOR_READ(recv_buf, size);
  *
  * Also remember to do this in the callback for the receive side, and, when
  * using circular buffers, before reading the filled data and after filling the

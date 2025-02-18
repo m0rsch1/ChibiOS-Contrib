@@ -165,7 +165,7 @@ static void fill_tx_fifo_elem_for_packet(char *elem_base,
     memcpy ( elem_data, ctfp->data8, len );
     if((SCB->CCR & SCB_CCR_DC_Msk) != 0) {
         //D-Cache enabled. need to take care of cleaning/invalidating
-        SCB_CleanDCache_by_Addr ( ( uint32_t* ) elem_base, 8 + max_data );
+        DCACHE_WRITE_BACK ( elem_base, 8 + max_data );
     }
 }
 
@@ -174,7 +174,7 @@ static void parse_rx_fifo_elem_to_packet(CANRxFrame *crfp,
                                          size_t max_data) {
     if ( ( SCB->CCR & SCB_CCR_DC_Msk ) != 0 ) {
         //D-Cache enabled. need to take care of cleaning/invalidating
-        SCB_InvalidateDCache_by_Addr ( ( uint32_t* ) elem_base, 8 + max_data );
+        DCACHE_INVALIDATE_FOR_READ ( elem_base, 8 + max_data );
     }
     MCAN_RX_Element_Header const *elem_head =
         ( MCAN_RX_Element_Header* ) elem_base;
@@ -213,7 +213,7 @@ static void parse_txevent_fifo_elem_to_packet(CANRxFrame *crfp,
                                          char const *elem_base) {
     if ( ( SCB->CCR & SCB_CCR_DC_Msk ) != 0 ) {
         //D-Cache enabled. need to take care of cleaning/invalidating
-        SCB_InvalidateDCache_by_Addr ( ( uint32_t* ) elem_base, 8 );
+        DCACHE_INVALIDATE_FOR_READ ( elem_base, 8 );
     }
     MCAN_TX_Event_Element_Header const *elem_head =
         ( MCAN_TX_Event_Element_Header* ) elem_base;
@@ -472,7 +472,7 @@ static void can_lld_set_std_filter ( CANDriver *canp,  uint8_t filter, MCAN_Std_
         elem->sfec = 0;
         if ( ( SCB->CCR & SCB_CCR_DC_Msk ) != 0 ) {
             //D-Cache enabled. need to take care of cleaning/invalidating
-            SCB_CleanDCache_by_Addr ( ( uint32_t* ) elem, 4 );
+            DCACHE_WRITE_BACK ( elem, 4 );
         }
     }
     if ( value.sfec != 0 ) {
@@ -482,14 +482,14 @@ static void can_lld_set_std_filter ( CANDriver *canp,  uint8_t filter, MCAN_Std_
         elem->unused_12 = value.unused_12;
         if ( ( SCB->CCR & SCB_CCR_DC_Msk ) != 0 ) {
             //D-Cache enabled. need to take care of cleaning/invalidating
-            SCB_CleanDCache_by_Addr ( ( uint32_t* ) elem, 4 );
+            DCACHE_WRITE_BACK ( elem, 4 );
         }
         //setting sfec reenables the filter. we do that after we are
         //sure our changes have been written to memory.
         elem->sfec = value.sfec;
         if ( ( SCB->CCR & SCB_CCR_DC_Msk ) != 0 ) {
             //D-Cache enabled. need to take care of cleaning/invalidating
-            SCB_CleanDCache_by_Addr ( ( uint32_t* ) elem, 4 );
+            DCACHE_WRITE_BACK ( elem, 4 );
         }
     }
 }
@@ -508,7 +508,7 @@ static void can_lld_set_ext_filter ( CANDriver *canp,  uint8_t filter, MCAN_Ext_
         elem->efec = 0;
         if ( ( SCB->CCR & SCB_CCR_DC_Msk ) != 0 ) {
             //D-Cache enabled. need to take care of cleaning/invalidating
-            SCB_CleanDCache_by_Addr ( ( uint32_t* ) elem, 8 );
+            DCACHE_WRITE_BACK ( elem, 8 );
         }
     }
     if ( value.efec != 0 ) {
@@ -518,14 +518,14 @@ static void can_lld_set_ext_filter ( CANDriver *canp,  uint8_t filter, MCAN_Ext_
         elem->unused_61 = value.unused_61;
         if ( ( SCB->CCR & SCB_CCR_DC_Msk ) != 0 ) {
             //D-Cache enabled. need to take care of cleaning/invalidating
-            SCB_CleanDCache_by_Addr ( ( uint32_t* ) elem, 8 );
+            DCACHE_WRITE_BACK ( elem, 8 );
         }
         //setting efec reenables the filter. we do that after we are
         //sure our changes have been written to memory.
         elem->efec = value.efec;
         if ( ( SCB->CCR & SCB_CCR_DC_Msk ) != 0 ) {
             //D-Cache enabled. need to take care of cleaning/invalidating
-            SCB_CleanDCache_by_Addr ( ( uint32_t* ) elem, 8 );
+            DCACHE_WRITE_BACK ( elem, 8 );
         }
     }
 }
@@ -719,9 +719,7 @@ msg_t can_lld_start ( CANDriver *canp )
     memset ( canp->config->memory, 0, canp->config->memory_size );
     if ( ( SCB->CCR & SCB_CCR_DC_Msk ) != 0 ) {
         //D-Cache enabled. need to take care of cleaning/invalidating
-        SCB_CleanDCache_by_Addr (
-            ( uint32_t * ) mem_dma_base,
-            mem_dma_end - mem_dma_base );
+        DCACHE_WRITE_BACK ( mem_dma_base, mem_dma_end - mem_dma_base );
     }
 
     canp->rxbuffer_status = 0ULL;

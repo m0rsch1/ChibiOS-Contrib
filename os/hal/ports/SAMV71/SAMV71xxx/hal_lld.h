@@ -97,7 +97,8 @@ typedef struct {
 /*===========================================================================*/
 
 #define CHECK_CACHE_ALIGNED(x) (((uintptr_t)(x) & (CACHE_LINE_SIZE-1)) == 0)
-#define CACHE_ALIGN(x) ((((uintptr_t)(x) & (CACHE_LINE_SIZE-1)) == 0)?(uintptr_t)(x):(((uintptr_t)(x)+(CACHE_LINE_SIZE-1)) & ~(CACHE_LINE_SIZE-1)))
+#define CACHE_ALIGN_AFTER(x) ((((uintptr_t)(x)-1) | (CACHE_LINE_SIZE-1))+1)
+#define CACHE_ALIGN_BEFORE(x) (((uintptr_t)(x)) & ~(CACHE_LINE_SIZE-1))
 /*
  * assuming CACHE_LINE_SIZE == 32
  * a 1 byte sized data structure needs a buffer of 32 aligned bytes. the worst
@@ -111,6 +112,28 @@ typedef struct {
  */
 #define CACHE_ALIGNABLE_ALLOC_SIZE(n) ((((n)-1)|(CACHE_LINE_SIZE - 1)) + CACHE_LINE_SIZE)
 #define CACHE_ALIGNABLE_ALLOC_TYPEDSIZE(t, n) ((((sizeof(t) * (n) - 1)|(CACHE_LINE_SIZE - 1)|(sizeof(t)-1)) + CACHE_LINE_SIZE)/sizeof(t) + 1U)
+
+/** Cleans DCACHE lines, writing them to backing store
+ *
+ * NOTE This will clean adjacent data on the same cache line. Usually, this
+ *      is no problem because the CPU is the only user of that data, but there
+ *      could be a hardware buffer in the same cache line.
+ */
+#define DCACHE_WRITE_BACK(addr, size) \
+SCB_CleanDCache_by_Addr((uint32_t *)CACHE_ALIGN_BEFORE(addr), \
+((size)==0)?0:(CACHE_ALIGN_AFTER(((uintptr_t)(addr)) + (size)) - CACHE_ALIGN_BEFORE(addr)))
+#define DCACHE_WRITE_BACK_ALIGNED(addr, size) SCB_CleanDCache_by_Addr((uint32_t *)(addr), (size))
+
+/** Invalidates DCACHE lines for reading from backing store
+ *
+ * WARNING This will invalidate all data on the same cache line(32 bytes).
+ *         Make sure there is nothing of value(like other variables, return
+ *         addresses, ...)
+ */
+#define DCACHE_INVALIDATE_FOR_READ(addr, size) \
+SCB_InvalidateDCache_by_Addr((uint32_t *)CACHE_ALIGN_BEFORE(addr), \
+((size)==0)?0:(CACHE_ALIGN_AFTER(((uintptr_t)(addr)) + (size)) - CACHE_ALIGN_BEFORE(addr)))
+#define DCACHE_INVALIDATE_FOR_READ_ALIGNED(addr, size) SCB_InvalidateDCache_by_Addr((uint32_t *)(addr), (size))
 
 /*===========================================================================*/
 /* External declarations.                                                    */

@@ -71,7 +71,7 @@ static void spi_lld_setup_circular_buffer_recv(SPIDriver *spip,
   spip->dma_recv_descriptors[1].XDMAC_MBR_TA = rxbuf + block1_count;
   spip->dma_recv_descriptors[1].XDMAC_MBR_UBC |= XDMAC_MBR_UBC_NDE;
 
-  SCB_CleanDCache_by_Addr((uint32_t*)spip->dma_recv_descriptors, sizeof(*spip->dma_recv_descriptors)*2);
+  DCACHE_WRITE_BACK_ALIGNED(spip->dma_recv_descriptors, sizeof(*spip->dma_recv_descriptors)*2);
 
   xdmacChannelSetSource(spip->dma_recv_channel, recv_addr);
   xdmacChannelSetDestination(spip->dma_recv_channel, rxbuf);
@@ -151,7 +151,7 @@ static void spi_lld_setup_circular_buffer_send(SPIDriver *spip,
   spip->dma_send_descriptors[1].XDMAC_MBR_TA = txbuf + block1_count;
   spip->dma_send_descriptors[1].XDMAC_MBR_UBC |= XDMAC_MBR_UBC_NDE;
 
-  SCB_CleanDCache_by_Addr((uint32_t*)spip->dma_send_descriptors, sizeof(*spip->dma_send_descriptors)*2);
+  DCACHE_WRITE_BACK_ALIGNED(spip->dma_send_descriptors, sizeof(*spip->dma_send_descriptors)*2);
 
   xdmacChannelSetSource(spip->dma_send_channel, txbuf);
   xdmacChannelSetDestination(spip->dma_send_channel, send_addr);
@@ -207,7 +207,7 @@ static void spi_lld_setup_circular_constant_send(SPIDriver *spip,
     XDMAC_MBR_UBC_UBLEN(block2_count);
   spip->dma_send_descriptors[1].XDMAC_MBR_TA = tx_ptr;
 
-  SCB_CleanDCache_by_Addr((uint32_t*)spip->dma_send_descriptors, sizeof(*spip->dma_send_descriptors)*2);
+  DCACHE_WRITE_BACK_ALIGNED(spip->dma_send_descriptors, sizeof(*spip->dma_send_descriptors)*2);
 
   xdmacChannelSetSource(spip->dma_send_channel, tx_ptr);
   xdmacChannelSetDestination(spip->dma_send_channel, send_addr);
@@ -427,8 +427,8 @@ void spi_lld_init(void) {
   SPID0.device = SPI0;
   SPID0.dma_recv_hwid = SAMV71_XDMAC_HWREQ_SPI0_RECV;
   SPID0.dma_send_hwid = SAMV71_XDMAC_HWREQ_SPI0_XMIT;
-  SPID0.dma_recv_descriptors = (samv71_xdmac_linked_list_view_0_t*)CACHE_ALIGN(SPID0.dma_recv_descriptors_buf);
-  SPID0.dma_send_descriptors = (samv71_xdmac_linked_list_view_0_t*)CACHE_ALIGN(SPID0.dma_send_descriptors_buf);
+  SPID0.dma_recv_descriptors = (samv71_xdmac_linked_list_view_0_t*)CACHE_ALIGN_AFTER(SPID0.dma_recv_descriptors_buf);
+  SPID0.dma_send_descriptors = (samv71_xdmac_linked_list_view_0_t*)CACHE_ALIGN_AFTER(SPID0.dma_send_descriptors_buf);
 #endif
 #if SAMV71_SPI_USE_SPI1 == TRUE
   /* Driver initialization.*/
@@ -436,8 +436,8 @@ void spi_lld_init(void) {
   SPID1.device = SPI1;
   SPID1.dma_recv_hwid = SAMV71_XDMAC_HWREQ_SPI1_RECV;
   SPID1.dma_send_hwid = SAMV71_XDMAC_HWREQ_SPI1_XMIT;
-  SPID1.dma_recv_descriptors = (samv71_xdmac_linked_list_view_0_t*)CACHE_ALIGN(SPID1.dma_recv_descriptors_buf);
-  SPID1.dma_send_descriptors = (samv71_xdmac_linked_list_view_0_t*)CACHE_ALIGN(SPID1.dma_send_descriptors_buf);
+  SPID1.dma_recv_descriptors = (samv71_xdmac_linked_list_view_0_t*)CACHE_ALIGN_AFTER(SPID1.dma_recv_descriptors_buf);
+  SPID1.dma_send_descriptors = (samv71_xdmac_linked_list_view_0_t*)CACHE_ALIGN_AFTER(SPID1.dma_send_descriptors_buf);
 #endif
 }
 
