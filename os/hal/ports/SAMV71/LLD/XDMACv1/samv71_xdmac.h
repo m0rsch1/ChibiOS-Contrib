@@ -762,6 +762,7 @@ extern "C" {
   const samv71_xdmac_channel_t *xdmacChannelAlloc(samv71_xdmacisr_t func,
                                            void *param);
   void xdmacChannelFreeI(const samv71_xdmac_channel_t *dmachp);
+  void xdmacDisableAll(void);
 #ifdef __cplusplus
 }
 #endif

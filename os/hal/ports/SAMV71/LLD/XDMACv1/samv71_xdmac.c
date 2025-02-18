@@ -285,6 +285,21 @@ void xdmacChannelFreeI(const samv71_xdmac_channel_t *xdmacchp) {
   }
 }
 
+void xdmacDisableAll(void) {
+ uint32_t i, startid, endid;
+
+  startid = 0U;
+  endid   = SAMV71_XDMAC_CHANNELS - 1U;
+
+  for (i = startid; i <= endid; i++) {
+    uint32_t mask = (1U << i);
+    if ((xdmac.allocated_mask & mask) != 0U) {
+      const samv71_xdmac_channel_t *xdmacchp = SAMV71_XDMAC_CHANNEL(i);
+
+      xdmacChannelDisable(xdmacchp);
+    }
+  }
+}
 
 #endif /* SAMV71_XDMAC_REQUIRED */
 
