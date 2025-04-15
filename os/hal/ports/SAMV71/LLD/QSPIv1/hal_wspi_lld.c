@@ -355,7 +355,7 @@ void wspi_lld_send(WSPIDriver *wspip, const wspi_command_t *cmdp,
                                  XDMAC_CIE_WBIE | XDMAC_CIE_ROIE);
   xdmacChannelStartSingleMicroblock(wspip->dma_channel,
                                     XDMAC_CC_TYPE_MEM_TRAN |
-                                    XDMAC_CC_MBSIZE_SIXTEEN |
+                                    XDMAC_CC_MBSIZE_SINGLE |
                                     XDMAC_CC_SWREQ_SWR_CONNECTED |
                                     XDMAC_CC_SAM_INCREMENTED_AM |
                                     XDMAC_CC_DAM_INCREMENTED_AM |
@@ -433,7 +433,7 @@ void wspi_lld_receive(WSPIDriver *wspip, const wspi_command_t *cmdp,
                                  XDMAC_CIE_WBIE | XDMAC_CIE_ROIE);
   xdmacChannelStartSingleMicroblock(wspip->dma_channel,
                                     XDMAC_CC_TYPE_MEM_TRAN |
-                                    XDMAC_CC_MBSIZE_SIXTEEN |
+                                    XDMAC_CC_MBSIZE_SINGLE |
                                     XDMAC_CC_SWREQ_SWR_CONNECTED |
                                     XDMAC_CC_SAM_INCREMENTED_AM |
                                     XDMAC_CC_DAM_INCREMENTED_AM |

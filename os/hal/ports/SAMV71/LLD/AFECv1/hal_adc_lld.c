@@ -492,7 +492,7 @@ void adc_lld_start_conversion(ADCDriver *adcp) {
 
     xdmacChannelSetMode(adcp->dma_channel,
                         XDMAC_CC_TYPE_PER_TRAN |
-                        XDMAC_CC_MBSIZE_SIXTEEN |
+                        XDMAC_CC_MBSIZE_SINGLE |
                         XDMAC_CC_SWREQ_HWR_CONNECTED |
                         XDMAC_CC_SAM_FIXED_AM |
                         XDMAC_CC_DAM_INCREMENTED_AM |

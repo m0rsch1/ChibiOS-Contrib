@@ -141,7 +141,7 @@ static void spi_lld_setup_circular_buffer_recv(SPIDriver *spip,
 
   xdmacChannelSetMode(spip->dma_recv_channel,
                       XDMAC_CC_TYPE_PER_TRAN |
-                      XDMAC_CC_MBSIZE_SIXTEEN |
+                      XDMAC_CC_MBSIZE_SINGLE |
                       XDMAC_CC_SWREQ_HWR_CONNECTED |
                       XDMAC_CC_SAM_FIXED_AM |
                       XDMAC_CC_DAM_INCREMENTED_AM |
@@ -185,7 +185,7 @@ static void spi_lld_setup_linear_buffer_recv(SPIDriver *spip, size_t n,
                                  XDMAC_CIE_WBIE | XDMAC_CIE_ROIE);
   xdmacChannelStartSingleMicroblock(spip->dma_recv_channel,
                                     XDMAC_CC_TYPE_PER_TRAN |
-                                    XDMAC_CC_MBSIZE_SIXTEEN |
+                                    XDMAC_CC_MBSIZE_SINGLE |
                                     XDMAC_CC_SWREQ_HWR_CONNECTED |
                                     XDMAC_CC_SAM_FIXED_AM |
                                     XDMAC_CC_DAM_INCREMENTED_AM |
@@ -236,7 +236,7 @@ static void spi_lld_setup_circular_buffer_send(SPIDriver *spip,
 
   xdmacChannelSetMode(spip->dma_send_channel,
                       XDMAC_CC_TYPE_PER_TRAN |
-                      XDMAC_CC_MBSIZE_SIXTEEN |
+                      XDMAC_CC_MBSIZE_SINGLE |
                       XDMAC_CC_SWREQ_HWR_CONNECTED |
                       XDMAC_CC_SAM_INCREMENTED_AM |
                       XDMAC_CC_DAM_FIXED_AM |
@@ -300,7 +300,7 @@ static void spi_lld_setup_circular_constant_send(SPIDriver *spip,
 
   xdmacChannelSetMode(spip->dma_send_channel,
                       XDMAC_CC_TYPE_PER_TRAN |
-                      XDMAC_CC_MBSIZE_SIXTEEN |
+                      XDMAC_CC_MBSIZE_SINGLE |
                       XDMAC_CC_SWREQ_HWR_CONNECTED |
                       XDMAC_CC_SAM_FIXED_AM |
                       XDMAC_CC_DAM_FIXED_AM |
@@ -344,7 +344,7 @@ static void spi_lld_setup_linear_buffer_send(SPIDriver *spip, size_t n,
                                  XDMAC_CIE_WBIE | XDMAC_CIE_ROIE);
   xdmacChannelStartSingleMicroblock(spip->dma_send_channel,
                                     XDMAC_CC_TYPE_PER_TRAN |
-                                    XDMAC_CC_MBSIZE_SIXTEEN |
+                                    XDMAC_CC_MBSIZE_SINGLE |
                                     XDMAC_CC_SWREQ_HWR_CONNECTED |
                                     XDMAC_CC_SAM_INCREMENTED_AM |
                                     XDMAC_CC_DAM_FIXED_AM |
@@ -378,7 +378,7 @@ static void spi_lld_setup_linear_constant_send(SPIDriver *spip, size_t n,
                                  XDMAC_CIE_WBIE | XDMAC_CIE_ROIE);
   xdmacChannelStartSingleMicroblock(spip->dma_send_channel,
                                     XDMAC_CC_TYPE_PER_TRAN |
-                                    XDMAC_CC_MBSIZE_SIXTEEN |
+                                    XDMAC_CC_MBSIZE_SINGLE |
                                     XDMAC_CC_SWREQ_HWR_CONNECTED |
                                     XDMAC_CC_SAM_FIXED_AM |
                                     XDMAC_CC_DAM_FIXED_AM |
