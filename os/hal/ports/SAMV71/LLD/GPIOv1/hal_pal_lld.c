@@ -184,10 +184,10 @@ void _pal_lld_setgroupmode(ioportid_t port,
         /* Disable interrupts on the pin(s) */
         port->PIO_IDR = mask;
         /* Set the ABCDSR register */
-        uint32_t abcdsr = port->PIO_ABCDSR[0];
-        port->PIO_ABCDSR[0] = mode & 0x1 ? (mask | abcdsr) : (~mask & abcdsr);
-        abcdsr = port->PIO_ABCDSR[1];
-        port->PIO_ABCDSR[1] = mode & 0x2 ? (mask | abcdsr) : (~mask & abcdsr);
+        uint32_t abcdsr0 = port->PIO_ABCDSR[0];
+        port->PIO_ABCDSR[0] = mode & 0x1 ? (mask | abcdsr0) : (~mask & abcdsr0);
+        uint32_t abcdsr1 = port->PIO_ABCDSR[1];
+        port->PIO_ABCDSR[1] = mode & 0x2 ? (mask | abcdsr1) : (~mask & abcdsr1);
         /* Remove the pin(s) from under the control of PIO */
         port->PIO_PDR = mask;
         /* Set pull-up or pull-down resistors */
