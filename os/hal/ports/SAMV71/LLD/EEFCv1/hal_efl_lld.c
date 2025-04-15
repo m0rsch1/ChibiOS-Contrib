@@ -136,7 +136,7 @@ static uint32_t efl_lld_commit_command_and_wait_for_RDY(uint32_t FCR_command) {
   return res;
 }
 
-static uint32_t efl_lld_commit_command_and_wait_for_RDY_FromISR(uint32_t FCR_command) {
+static __attribute__((unused)) uint32_t efl_lld_commit_command_and_wait_for_RDY_FromISR(uint32_t FCR_command) {
   SAM_BA_flash_helper_t *func = *(SAM_BA_flash_helper_t**)(0x00800008);
   chSysLockFromISR();
   uint32_t res = func(0, FCR_command);
@@ -227,7 +227,7 @@ void efl_lld_init(void) {
     plane_no++;
   }
   uint32_t fl_nb_lock = REG_EFC_FRR;
-  uint32_t lock_no;
+  uint32_t lock_no = 0;
   uint32_t fl_lock[32];
   while(lock_no < fl_nb_lock && lock_no < 32) {
     fl_lock[lock_no] = REG_EFC_FRR;
@@ -237,6 +237,13 @@ void efl_lld_init(void) {
     (void)REG_EFC_FRR;
     lock_no++;
   }
+
+  (void)fl_id;
+  (void)fl_plane;
+  (void)plane_no;
+  (void)fl_nb_lock;
+  (void)lock_no;
+  (void)fl_lock;
 
   //my device has:
   //a single plane of 2MB
