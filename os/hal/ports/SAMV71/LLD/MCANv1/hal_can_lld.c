@@ -237,11 +237,6 @@ static void parse_txevent_fifo_elem_to_packet(CANRxFrame *crfp,
     }
 }
 
-uint32_t can_irq0_bits_seen = 0;
-uint32_t can_irq1_bits_seen = 0;
-uint32_t can_irq0_bits_cleared = 0;
-uint32_t can_irq1_bits_cleared = 0;
-
 static void can_lld_serve_interrupt0 ( CANDriver *canp )
 {
     //the interrupt gets recalled if still active, no need to loop here.
@@ -251,8 +246,6 @@ static void can_lld_serve_interrupt0 ( CANDriver *canp )
 
     //clear interrupt status bit handled by us
     canp->device->MCAN_IR = ir & ie & ~ils;
-    can_irq0_bits_seen |= ir;
-    can_irq0_bits_cleared |= ir & ie & ~ils;
 
     //select only enabled interrupts that are handled by us
     ir &= ie & ~ils;
@@ -392,8 +385,6 @@ static void can_lld_serve_interrupt1 ( CANDriver *canp )
 
     //clear interrupt status bit handled by us
     canp->device->MCAN_IR = ir & ie & ils;
-    can_irq1_bits_seen |= ir;
-    can_irq1_bits_cleared |= ir & ie & ~ils;
 
     //select only enabled interrupts that are handled by us
     ir &= ie & ils;
