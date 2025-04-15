@@ -175,6 +175,7 @@ void xdmacInit(void) {
  * @param[in] priority  IRQ priority for the DMA stream
  * @param[in] func      handling function pointer, can be @p NULL
  * @param[in] param     a parameter to be passed to the handling function
+ * @param[in] prio      priority, 0..23
  * @return              Pointer to the allocated @p samv71_xdmac_channel_t
  *                      structure.
  * @retval NULL         if a/the stream is not available.
@@ -182,42 +183,64 @@ void xdmacInit(void) {
  * @iclass
  */
 const samv71_xdmac_channel_t *xdmacChannelAllocI(samv71_xdmacisr_t func,
-                                          void *param) {
-  uint32_t i, startid, endid;
+                                          void *param, samv71_xdmacprio_t prio) {
+  int i, startid, endid;
+  uint32_t mask;
 
   osalDbgCheckClassI();
 
-  startid = 0U;
+  /* it seems like the channel arbitration priority depends on the
+   * channel index, higher is lower priority */
+  startid = prio;
   endid   = SAMV71_XDMAC_CHANNELS - 1U;
 
+  const samv71_xdmac_channel_t *xdmacchp = NULL;
+
+  //at first, scan forward, towards worse priorities
   for (i = startid; i <= endid; i++) {
-    uint32_t mask = (1U << i);
+    mask = (1U << i);
     if ((xdmac.allocated_mask & mask) == 0U) {
-      const samv71_xdmac_channel_t *xdmacchp = SAMV71_XDMAC_CHANNEL(i);
-
-      if ( xdmac.allocated_mask == 0U ) {
-        pmc_enable_periph_clk ( ID_XDMAC );
-
-        XDMAC->XDMAC_GID = 0xFFFFFFFFU;
-        XDMAC->XDMAC_GD = 0xFFFFFFFFU;
-
-        nvicEnableVector ( XDMAC_NVIC_NUMBER, XDMAC_NVIC_PRIORITY );
+      xdmacchp = SAMV71_XDMAC_CHANNEL(i);
+      break;
+    }
+  }
+  if(!xdmacchp && prio > 0) {
+    //then try backwards.
+    startid = prio-1;
+    endid   = 0;
+    for (i = startid; i >= endid; i--) {
+      mask = (1U << i);
+      if ((xdmac.allocated_mask & mask) == 0U) {
+        xdmacchp = SAMV71_XDMAC_CHANNEL(i);
+        break;
       }
-
-      /* Installs the DMA handler.*/
-      xdmac.channels[i].func  = func;
-      xdmac.channels[i].param = param;
-      xdmac.allocated_mask  |= mask;
-
-      /* Putting the stream in a safe state.*/
-      xdmacChannelDisable(xdmacchp);
-      xdmacchp->channel->XDMAC_CC = 0;
-
-      return xdmacchp;
     }
   }
 
-  return NULL;
+  if(xdmacchp) {
+    if (xdmac.allocated_mask == 0U) {
+      pmc_enable_periph_clk(ID_XDMAC);
+
+      XDMAC->XDMAC_GID = 0xFFFFFFFFU;
+      XDMAC->XDMAC_GD = 0xFFFFFFFFU;
+      XDMAC->XDMAC_GWAC = XDMAC_GWAC_PW0(15) | XDMAC_GWAC_PW1(10) | XDMAC_GWAC_PW2(5) | XDMAC_GWAC_PW3(0);
+
+      nvicEnableVector(XDMAC_NVIC_NUMBER, XDMAC_NVIC_PRIORITY);
+    }
+
+    osalDbgCheck((xdmac.allocated_mask & mask) == 0);
+    xdmac.allocated_mask  |= mask;
+
+    /* Installs the DMA handler.*/
+    xdmac.channels[i].func  = func;
+    xdmac.channels[i].param = param;
+
+    /* Putting the stream in a safe state.*/
+    xdmacChannelDisable(xdmacchp);
+    xdmacchp->channel->XDMAC_CC = 0;
+  }
+
+  return xdmacchp;
 }
 
 /**
@@ -243,11 +266,11 @@ const samv71_xdmac_channel_t *xdmacChannelAllocI(samv71_xdmacisr_t func,
  * @api
  */
 const samv71_xdmac_channel_t *xdmacChannelAlloc(samv71_xdmacisr_t func,
-                                         void *param) {
+                                         void *param, samv71_xdmacprio_t prio) {
   const samv71_xdmac_channel_t *xdmacchp;
 
   osalSysLock();
-  xdmacchp = xdmacChannelAllocI(func, param);
+  xdmacchp = xdmacChannelAllocI(func, param, prio);
   osalSysUnlock();
 
   return xdmacchp;

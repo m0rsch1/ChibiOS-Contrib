@@ -610,6 +610,8 @@ msg_t spi_lld_start(SPIDriver *spip) {
 
   if (spip->state == SPI_STOP) {
 
+    samv71_xdmacprio_t recv_dma_prio = 23;
+    samv71_xdmacprio_t send_dma_prio = 23;
     /* Enables the peripheral.*/
     if (false) {
     }
@@ -620,6 +622,8 @@ msg_t spi_lld_start(SPIDriver *spip) {
         nvicEnableVector(SPI0_NVIC_NUMBER, SPI_NVIC_PRIORITY);
         /* Enable clock source */
         pmc_enable_periph_clk(ID_SPI0);
+        recv_dma_prio = SAMV71_SPI0_RECV_DMA_PRIO;
+        send_dma_prio = SAMV71_SPI0_SEND_DMA_PRIO;
     }
 #endif
 #if SAMV71_SPI_USE_SPI1 == TRUE
@@ -628,6 +632,8 @@ msg_t spi_lld_start(SPIDriver *spip) {
         nvicEnableVector(SPI1_NVIC_NUMBER, SPI_NVIC_PRIORITY);
         /* Enable clock source */
         pmc_enable_periph_clk(ID_SPI1);
+        recv_dma_prio = SAMV71_SPI1_RECV_DMA_PRIO;
+        send_dma_prio = SAMV71_SPI1_SEND_DMA_PRIO;
     }
 #endif
 #if SAMV71_SPI_USE_QSPI == TRUE
@@ -636,6 +642,8 @@ msg_t spi_lld_start(SPIDriver *spip) {
         nvicEnableVector(SPI_QSPI_NVIC_NUMBER, SPI_NVIC_PRIORITY);
         /* Enable clock source */
         pmc_enable_periph_clk(ID_QSPI);
+        recv_dma_prio = SAMV71_SPI_QSPI_RECV_DMA_PRIO;
+        send_dma_prio = SAMV71_SPI_QSPI_SEND_DMA_PRIO;
     }
 #endif
 
@@ -643,8 +651,8 @@ msg_t spi_lld_start(SPIDriver *spip) {
       osalDbgAssert(false, "invalid SPI instance");
     }
 
-    spip->dma_recv_channel = xdmacChannelAllocI(spi_lld_recv_dma_func, spip);
-    spip->dma_send_channel = xdmacChannelAllocI(spi_lld_send_dma_func, spip);
+    spip->dma_recv_channel = xdmacChannelAllocI(spi_lld_recv_dma_func, spip, recv_dma_prio);
+    spip->dma_send_channel = xdmacChannelAllocI(spi_lld_send_dma_func, spip, send_dma_prio);
 
     if (spi_lld_isSpi(spip)) {
       Spi *device = spi_lld_getSpiDevice(spip);

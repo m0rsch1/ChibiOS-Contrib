@@ -202,6 +202,8 @@ typedef struct {
     uint32_t XDMAC_MBR_DUS; //destination microblock stride register; gets loaded into CDUS
 } samv71_xdmac_linked_list_view_3_t;
 
+typedef uint8_t samv71_xdmacprio_t;
+
 /*===========================================================================*/
 /* Driver macros.                                                            */
 /*===========================================================================*/
@@ -758,9 +760,9 @@ extern "C" {
 #endif
   void xdmacInit(void);
   const samv71_xdmac_channel_t *xdmacChannelAllocI(samv71_xdmacisr_t func,
-                                            void *param);
+                                            void *param, samv71_xdmacprio_t prio);
   const samv71_xdmac_channel_t *xdmacChannelAlloc(samv71_xdmacisr_t func,
-                                           void *param);
+                                           void *param, samv71_xdmacprio_t prio);
   void xdmacChannelFreeI(const samv71_xdmac_channel_t *dmachp);
   void xdmacDisableAll(void);
 #ifdef __cplusplus

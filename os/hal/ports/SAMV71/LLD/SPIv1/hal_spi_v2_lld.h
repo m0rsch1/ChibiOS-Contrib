@@ -66,6 +66,38 @@
 #define SPI_QSPI_NVIC_NUMBER QSPI_IRQn
 #define SPI_QSPI_HANDLER VectorEC
 #endif
+/**
+ * @brief   SPI0 recv dma priority
+ * @details 0 to 23, lower number is higher priority
+ * @note    The default is @p 0.
+ */
+#if !defined(SAMV71_SPI0_RECV_DMA_PRIO) || defined(__DOXYGEN__)
+#define SAMV71_SPI0_RECV_DMA_PRIO                  16
+#endif
+/**
+ * @brief   SPI0 send dma priority
+ * @details 0 to 23, lower number is higher priority
+ * @note    The default is @p 16.
+ */
+#if !defined(SAMV71_SPI0_SEND_DMA_PRIO) || defined(__DOXYGEN__)
+#define SAMV71_SPI0_SEND_DMA_PRIO                  16
+#endif
+/**
+ * @brief   SPI1 recv dma priority
+ * @details 0 to 23, lower number is higher priority
+ * @note    The default is @p 16.
+ */
+#if !defined(SAMV71_SPI1_RECV_DMA_PRIO) || defined(__DOXYGEN__)
+#define SAMV71_SPI1_RECV_DMA_PRIO                  16
+#endif
+/**
+ * @brief   SPI1 send dma priority
+ * @details 0 to 23, lower number is higher priority
+ * @note    The default is @p 16.
+ */
+#if !defined(SAMV71_SPI1_SEND_DMA_PRIO) || defined(__DOXYGEN__)
+#define SAMV71_SPI1_SEND_DMA_PRIO                  16
+#endif
 
 
 /*===========================================================================*/

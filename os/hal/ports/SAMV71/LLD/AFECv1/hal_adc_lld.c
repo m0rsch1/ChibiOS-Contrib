@@ -260,18 +260,21 @@ static void adc_lld_apply_global_config(ADCDriver *adcp) {
  */
 void adc_lld_start(ADCDriver *adcp) {
 
+  samv71_xdmacprio_t dma_prio;
   if (adcp->state == ADC_STOP) {
     /* Enables the peripheral.*/
 #if SAMV71_ADC_USE_ADC0 == TRUE
     if (&ADCD0 == adcp) {
       pmc_enable_periph_clk(ID_AFEC0);
       nvicEnableVector ( AFEC0_NVIC_NUMBER, AFEC_NVIC_PRIORITY );
+      dma_prio = SAMV71_ADC0_DMA_PRIO;
     }
 #endif
 #if SAMV71_ADC_USE_ADC1 == TRUE
     if (&ADCD1 == adcp) {
       pmc_enable_periph_clk(ID_AFEC1);
       nvicEnableVector ( AFEC1_NVIC_NUMBER, AFEC_NVIC_PRIORITY );
+      dma_prio = SAMV71_ADC1_DMA_PRIO;
     }
 #endif
   }
@@ -312,7 +315,7 @@ void adc_lld_start(ADCDriver *adcp) {
 
   if((adcp->config->flags & ADC_FLAG_USE_DMA) != 0) {
     if(!adcp->dma_channel)
-      adcp->dma_channel = xdmacChannelAllocI(adc_lld_dma_func, adcp);
+      adcp->dma_channel = xdmacChannelAllocI(adc_lld_dma_func, adcp, dma_prio);
   } else {
     adcp->dma_channel = NULL;
   }
