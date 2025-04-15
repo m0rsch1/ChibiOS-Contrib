@@ -302,6 +302,22 @@ typedef enum {
   } while(0)
 
 /**
+ * @brief   Sets the output channel width
+ * @pre     The PWM unit must have been activated using @p pwmStart().
+ * @note    The function has effect at the next cycle start.
+ *
+ * @param[in] pwmp      pointer to a @p PWMDriver object
+ * @param[in] channel   PWM channel identifier (0...channels-1)
+ * @param[in] width     new PWM width for the channel in ticks
+ */
+#define pwmChangeChannelUpdate(pwmp, channel, width) do {                    \
+    (pwmp)->device->PWM_CH_NUM[(channel)+(pwmp)->base_channel].PWM_CDTYUPD = \
+      PWM_CDTYUPD_CDTYUPD(width);                                            \
+    (pwmp)->device->PWM_CMP[(channel)+(pwmp)->base_channel].PWM_CMPVUPD =    \
+      PWM_CMPVUPD_CVUPD(width);                                              \
+  } while(0)
+
+/**
  * @brief   Sets the output channel dead time
  * @pre     The PWM unit must have been activated using @p pwmStart().
  * @note    The function has effect at the next cycle start.
@@ -324,6 +340,101 @@ typedef enum {
         PWM_DT_DTH(l_to_h) | PWM_DT_DTL(h_to_l);                              \
     }                                                                         \
   } while(0)
+
+/**
+ * @brief   Sets the output channel dead time
+ * @pre     The PWM unit must have been activated using @p pwmStart().
+ * @note    The function has effect at the next cycle start.
+ *
+ * @param[in] pwmp      pointer to a @p PWMDriver object
+ * @param[in] channel   PWM channel identifier (0...channels-1)
+ * @param[in] l_to_h    new deadtime for transition from low to high side drive,
+ *                      in ticks
+ * @param[in] h_to_l    new deadtime for transition from high to low side drive,
+ *                      in ticks
+ */
+#define pwmSetDeadtimeUpdate(pwmp, channel, l_to_h, h_to_l) do {            \
+    (pwmp)->device->PWM_CH_NUM[(channel)+(pwmp)->base_channel].PWM_DTUPD =  \
+      PWM_DTUPD_DTHUPD(l_to_h) | PWM_DTUPD_DTLUPD(h_to_l);                  \
+  } while(0)
+
+/**
+ * @brief   Sets the output drive forced state setting
+ * @pre     The PWM unit must have been activated using @p pwmStart().
+ * @pre     The channel must have been activated using @p pwmEnableChannel().
+ * @note    The actual direction has effect immediately, the fact if it is
+ *          overriden has effect at the next cycle start.
+ * @note    For already enabled channels, pwmCommitForceMode must be called
+ *          after all changes for this pwm cycle are complete
+ *
+ * @param[in] pwmp          pointer to a @p PWMDriver object
+ * @param[in] channel       PWM channel identifier (0...channels-1)
+ * @param[in] force_setting The force setting
+ */
+#define pwmSetChannelForceModeUpdate(pwmp, channel, force_setting) do {                                         \
+    uint32_t os_set = ((force_setting) & (PWM_OS_OSH0 | PWM_OS_OSL0)) << ((channel) + (pwmp)->base_channel);    \
+    uint32_t os_clear = (~(force_setting) & (PWM_OS_OSH0 | PWM_OS_OSL0)) << ((channel) + (pwmp)->base_channel); \
+    (pwmp)->os_reg |= os_set;                                                                                   \
+    (pwmp)->os_reg &= ~os_clear;                                                                                \
+    os_set = (pwmp)->os_reg & ~(pwmp)->device->PWM_OS;                                                          \
+    os_clear = ~(pwmp)->os_reg & (pwmp)->device->PWM_OS;                                                        \
+    uint32_t oov_mask = (PWM_OS_OSH0 | PWM_OS_OSL0) << ((channel) + (pwmp)->base_channel);                      \
+    uint32_t oov = (pwmp)->device->PWM_OOV;                                                                     \
+    oov &= ~oov_mask;                                                                                           \
+    oov |= ((force_setting) >> (8 - (channel) - (pwmp)->base_channel)) & oov_mask;                              \
+    (pwmp)->device->PWM_OOV = oov;                                                                              \
+  } while(0)
+
+/**
+ * @brief   Sets the output channel mode
+ * @pre     The PWM unit must have been activated using @p pwmStart().
+ * @note    The function has effect at the next cycle start.
+ *
+ * @param[in] pwmp      pointer to a @p PWMDriver object
+ * @param[in] channel   PWM channel identifier (0...channels-1)
+ * @param[in] mode      The new mode
+ */
+#define pwmSetChannelModeUpdate(pwmp, channel, mode) do {                                    \
+    volatile uint32_t *reg = (&(pwmp)->device->PWM_CMUPD0) +                                 \
+                             ((channel) + (pwmp)->base_channel) * (0x20 / sizeof(uint32_t)); \
+    if ((mode) == PWM_OUTPUT_ACTIVE_LOW) {                                                   \
+      *reg = PWM_CMUPD0_CPOLUP;                                                              \
+    } else {                                                                                 \
+      *reg = 0;                                                                              \
+    }                                                                                        \
+  } while(0)
+
+
+/**
+ * @brief   Sends the output drive forced state setting to the device for
+ *          enabled channels
+ * @pre     The PWM unit must have been activated using @p pwmStart().
+ * @note    If force flags are cleared and set in the same cycle,
+ *          only the sets take effect. This function must be called
+ *          again in the next cycle to apply the clears.
+ *
+ * @param[in] pwmp          pointer to a @p PWMDriver object
+ */
+  /* The device does not like to have OSCUPD and OSSUPD set in the same
+   * pwm cycle, so we collect all changes and try to commit what is left
+   * afterwards, avoiding trying to clear/set bits that will be changed later
+   * and maybe lost.
+   *
+   * Any bits in OSCUPD are ignored when bits in OSSUPD were set.
+   */
+#define pwmCommitForceMode(pwmp) do {                                                \
+    uint32_t pwm_os = (pwmp)->device->PWM_OS;                                        \
+    uint32_t os_set = (pwmp)->os_reg & ~pwm_os;                                      \
+    uint32_t os_clear = ~(pwmp)->os_reg & pwm_os;                                    \
+    uint32_t os_enabled_mask = (PWM_OS_OSH0 | PWM_OS_OSL0) * (pwmp)->device->PWM_SR; \
+    os_set &= os_enabled_mask;                                                       \
+    os_clear &= os_enabled_mask;                                                     \
+    if (os_set)                                                                      \
+      (pwmp)->device->PWM_OSSUPD = os_set;                                           \
+    if (os_clear)                                                                    \
+      (pwmp)->device->PWM_OSCUPD = os_clear;                                         \
+  } while(0)
+
 
 /*===========================================================================*/
 /* External declarations.                                                    */
@@ -366,7 +477,6 @@ extern "C" {
   void pwmSetChannelMode(PWMDriver *pwmp,
                          pwmchannel_t channel,
                          pwmmode_t mode);
-  void pwmCommitForceMode(PWMDriver *pwmp);
 
 #ifdef __cplusplus
 }
