@@ -82,6 +82,7 @@ GPTDriver GPTD11;
 /* Driver local functions.                                                   */
 /*===========================================================================*/
 
+#if SAMV71_GPT_USE_GPT0 || SAMV71_GPT_USE_GPT1 || SAMV71_GPT_USE_GPT2 || SAMV71_GPT_USE_GPT3 || SAMV71_GPT_USE_GPT4 || SAMV71_GPT_USE_GPT5 || SAMV71_GPT_USE_GPT6 || SAMV71_GPT_USE_GPT7 || SAMV71_GPT_USE_GPT8 || SAMV71_GPT_USE_GPT9 || SAMV71_GPT_USE_GPT10 || SAMV71_GPT_USE_GPT11
 static void gpt_lld_serve_interrupt(GPTDriver *gptp)
 {
     uint32_t sr = gptp->driver->TC_CHANNEL[gptp->channel].TC_SR;
@@ -92,6 +93,7 @@ static void gpt_lld_serve_interrupt(GPTDriver *gptp)
         _gpt_isr_invoke_cb(gptp);
     }
 }
+#endif
 
 /*===========================================================================*/
 /* Driver interrupt handlers.                                                */
