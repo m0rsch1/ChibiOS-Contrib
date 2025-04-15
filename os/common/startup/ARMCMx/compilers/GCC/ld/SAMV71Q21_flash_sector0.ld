@@ -62,7 +62,7 @@ MEMORY
   flash4 (RX) : org = 0x00000000, len = 0
   flash5 (RX) : org = 0x00000000, len = 0
   flash6 (RX) : org = 0x00000000, len = 0
-  flash7 (RX) : org = 0x00000000, len = 0
+  flash7 (RX) : org = 0x00400000, len = 128k      /* Flash sector 0(subsectors 0,1,2) */
   /* The following RAM setup assumes a default setup. Setting GPNVM Bits[8:7] to 0-3 allows distributing SRAM to DTCM and ITCM*/
   ram0   (wx) : org = 0x20400000, len = 384k      /* SRAM1 + SRAM2 */
   ram1   (wx) : org = 0x20400000, len = 320k      /* SRAM1: Data, Heap*/
@@ -78,27 +78,27 @@ MEMORY
    and a load region (_LMA suffix).*/
 
 /* Flash region to be used for exception vectors.*/
-REGION_ALIAS("VECTORS_FLASH", flash0);
-REGION_ALIAS("VECTORS_FLASH_LMA", flash0);
+REGION_ALIAS("VECTORS_FLASH", flash7);
+REGION_ALIAS("VECTORS_FLASH_LMA", flash7);
 
 /* Flash region to be used for constructors and destructors.*/
-REGION_ALIAS("XTORS_FLASH", flash0);
-REGION_ALIAS("XTORS_FLASH_LMA", flash0);
+REGION_ALIAS("XTORS_FLASH", flash7);
+REGION_ALIAS("XTORS_FLASH_LMA", flash7);
 
 /* Flash region to be used for code text.*/
-REGION_ALIAS("TEXT_FLASH", flash0);
-REGION_ALIAS("TEXT_FLASH_LMA", flash0);
+REGION_ALIAS("TEXT_FLASH", flash7);
+REGION_ALIAS("TEXT_FLASH_LMA", flash7);
 
 /* Flash region to be used for read only data.*/
-REGION_ALIAS("RODATA_FLASH", flash0);
-REGION_ALIAS("RODATA_FLASH_LMA", flash0);
+REGION_ALIAS("RODATA_FLASH", flash7);
+REGION_ALIAS("RODATA_FLASH_LMA", flash7);
 
 /* Flash region to be used for various.*/
-REGION_ALIAS("VARIOUS_FLASH", flash0);
-REGION_ALIAS("VARIOUS_FLASH_LMA", flash0);
+REGION_ALIAS("VARIOUS_FLASH", flash7);
+REGION_ALIAS("VARIOUS_FLASH_LMA", flash7);
 
 /* Flash region to be used for RAM(n) initialization data.*/
-REGION_ALIAS("RAM_INIT_FLASH_LMA", flash0);
+REGION_ALIAS("RAM_INIT_FLASH_LMA", flash7);
 
 /* RAM region to be used for Main stack. This stack accommodates the processing
    of all exceptions and interrupts.*/
@@ -110,7 +110,7 @@ REGION_ALIAS("PROCESS_STACK_RAM", ram2);
 
 /* RAM region to be used for data segment.*/
 REGION_ALIAS("DATA_RAM", ram1);
-REGION_ALIAS("DATA_RAM_LMA", flash0);
+REGION_ALIAS("DATA_RAM_LMA", flash7);
 
 /* RAM region to be used for BSS segment.*/
 REGION_ALIAS("BSS_RAM", ram2);

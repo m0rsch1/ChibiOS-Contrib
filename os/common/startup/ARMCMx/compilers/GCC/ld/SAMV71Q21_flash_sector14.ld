@@ -62,7 +62,7 @@ MEMORY
   flash4 (RX) : org = 0x00000000, len = 0
   flash5 (RX) : org = 0x00000000, len = 0
   flash6 (RX) : org = 0x00000000, len = 0
-  flash7 (RX) : org = 0x00420000, len = 2M-128k   /* Flash Sector 1-15 */
+  flash7 (RX) : org = 0x005c0000, len = 256k      /* Sector 14+15 */
   /* The following RAM setup assumes a default setup. Setting GPNVM Bits[8:7] to 0-3 allows distributing SRAM to DTCM and ITCM*/
   ram0   (wx) : org = 0x20400000, len = 384k      /* SRAM1 + SRAM2 */
   ram1   (wx) : org = 0x20400000, len = 320k      /* SRAM1: Data, Heap*/
@@ -129,5 +129,3 @@ INCLUDE rules_data.ld
 
 /* Memory rules inclusion.*/
 INCLUDE rules_memory.ld
-
-
