@@ -114,6 +114,9 @@ extern "C" {
                                            flash_sector_t sector);
   flash_error_t efl_lld_query_erase(void *instance, uint32_t *msec);
   flash_error_t efl_lld_verify_erase(void *instance, flash_sector_t sector);
+
+  flash_error_t flashReadUniqueIdentifier(void *instance, flash_offset_t offset,
+                                          size_t n, uint8_t *pp);
 #ifdef __cplusplus
 }
 #endif

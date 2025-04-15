@@ -606,6 +606,78 @@ flash_error_t efl_lld_verify_erase(void *instance, flash_sector_t sector) {
   return err;
 }
 
+/* The unique identifier is mapped instead of the main flash when trying to
+ * read it, so all accesses to flash must be stopped and the data copied while
+ * running from RAM.
+ */
+static flash_error_t efl_lld_read_unique_identifier_helper(flash_offset_t offset,
+                              size_t n, uint8_t *pp) __attribute__((section(".ramtext"),flatten,noinline));
+static flash_error_t efl_lld_read_unique_identifier_helper(flash_offset_t offset,
+                              size_t n, uint8_t *pp) {
+  //this cannot use any library functions and similar.
+  REG_EFC_FCR = EEFC_FCR_FKEY_PASSWD | EEFC_FCR_FCMD_STUI;
+  while (REG_EFC_FSR & EEFC_FSR_FRDY) {
+  }
+
+  uint8_t *addr = (uint8_t *)0x00400000+offset;
+
+  DCACHE_INVALIDATE_FOR_READ(addr, n);
+
+  for(unsigned int count = 0; count < n; count++) {
+    pp[count] = addr[count];
+  }
+
+  REG_EFC_FCR = EEFC_FCR_FKEY_PASSWD | EEFC_FCR_FCMD_SPUI;
+  while (!(REG_EFC_FSR & EEFC_FSR_FRDY)) {
+  }
+
+  DCACHE_INVALIDATE_FOR_READ(addr, n);
+  return FLASH_NO_ERROR;
+}
+
+
+/**
+ * @brief   Read unique identifier
+ *
+ * @param[in] instance              pointer to a @p EFlashDriver instance
+ * @param[in] offset                flash offset
+ * @param[in] n                     number of bytes to be programmed
+ * @param[in] pp                    pointer to the data buffer
+ * @return                          An error code.
+ * @retval FLASH_NO_ERROR           if there is no erase operation in progress.
+ * @retval FLASH_ERROR_HW_FAILURE   if access to the memory failed.
+ *
+ * @notapi
+ */
+flash_error_t flashReadUniqueIdentifier(void *instance, flash_offset_t offset,
+                              size_t n, uint8_t *pp) {
+  EFlashDriver *devp = (EFlashDriver *)instance;
+  flash_error_t err = FLASH_NO_ERROR;
+
+  osalDbgCheck((instance != NULL) && (pp != NULL) && (n > 0U));
+  osalDbgCheck(((size_t)offset + n) <= (size_t)efl_lld_descriptor.size);
+
+  osalDbgAssert((devp->state == FLASH_READY) || (devp->state == FLASH_ERASE),
+                "invalid state");
+
+  /* No reading while erasing.*/
+  if (devp->state == FLASH_ERASE) {
+    return FLASH_BUSY_ERASING;
+  }
+
+  /* FLASH_READ state while the operation is performed.*/
+  devp->state = FLASH_READ;
+
+  chSysLock();
+  err = efl_lld_read_unique_identifier_helper(offset, n, pp);
+  chSysUnlock();
+
+  /* Ready state again.*/
+  devp->state = FLASH_READY;
+
+  return err;
+}
+
 #endif /* HAL_USE_EFL == TRUE */
 
 /** @} */
