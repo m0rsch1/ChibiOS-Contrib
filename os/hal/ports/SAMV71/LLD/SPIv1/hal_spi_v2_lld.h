@@ -54,6 +54,7 @@
 
 #define SPI_MAIN_CLOCK (SystemCoreClock / 2)
 #define SPI_NVIC_PRIORITY CORTEX_MIN_KERNEL_PRIORITY-1
+#define SPI_QSPI_MAIN_CLOCK (SystemCoreClock / 2)
 
 #if defined(__SAMV71Q21B__)
 #define SPI0_NVIC_NUMBER SPI0_IRQn
@@ -61,7 +62,11 @@
 //14 => 42
 #define SPI1_NVIC_NUMBER SPI1_IRQn
 #define SPI1_HANDLER VectorE8
+
+#define SPI_QSPI_NVIC_NUMBER QSPI_IRQn
+#define SPI_QSPI_HANDLER VectorEC
 #endif
+
 
 /*===========================================================================*/
 /* Driver pre-compile time settings.                                         */
@@ -85,6 +90,10 @@
 #if !defined(SAMV71_SPI_USE_SPI1) || defined(__DOXYGEN__)
 #define SAMV71_SPI_USE_SPI1             FALSE
 #endif
+#if !defined(SAMV71_SPI_USE_QSPI) || defined(__DOXYGEN__)
+#define SAMV71_SPI_USE_QSPI             FALSE
+#endif
+
 /** @} */
 
 #define SPI_SUPPORTED_SLAVES 4
@@ -159,16 +168,11 @@ typedef struct hal_spi_lld_slave_config {
  * @brief   @p SPIDriver specific data.
  */
 #define spi_lld_driver_fields                                              \
-  Spi *device;                                                             \
   uint8_t dma_recv_hwid;                                                   \
   uint8_t dma_send_hwid;                                                   \
   uint8_t active_slave_config;                                             \
   uint8_t dma_recv_descriptors_buf[CACHE_ALIGNABLE_ALLOC_SIZE(sizeof(samv71_xdmac_linked_list_view_0_t)*2)]; \
   uint8_t dma_send_descriptors_buf[CACHE_ALIGNABLE_ALLOC_SIZE(sizeof(samv71_xdmac_linked_list_view_0_t)*2)]; \
-  size_t block1_size;                                                      \
-  size_t block2_size;                                                      \
-  const void *txbuf;                                                       \
-  void *rxbuf;                                                             \
   const samv71_xdmac_channel_t* dma_recv_channel;                          \
   const samv71_xdmac_channel_t* dma_send_channel;                          \
   samv71_xdmac_linked_list_view_0_t *dma_recv_descriptors;                 \
@@ -187,6 +191,9 @@ extern SPIDriver SPID0;
 #endif
 #if (SAMV71_SPI_USE_SPI1 == TRUE) && !defined(__DOXYGEN__)
 extern SPIDriver SPID1;
+#endif
+#if (SAMV71_SPI_USE_QSPI == TRUE) && !defined(__DOXYGEN__)
+extern SPIDriver SPID2;
 #endif
 
 #ifdef __cplusplus
@@ -208,6 +215,7 @@ extern "C" {
   uint16_t spi_lld_polled_exchange(SPIDriver *spip, uint16_t frame);
 
   msg_t spiSetActiveSlave(SPIDriver *spip, uint8_t active_slave_config);
+  uint32_t spiBaudrate(SPIDriver *spip);
 #ifdef __cplusplus
 }
 #endif
