@@ -87,6 +87,16 @@
  * @name    SAMV71 configuration options
  * @{
  */
+
+/**
+ * @brief   Expand the adc samples to include the channel index
+ * @details If set to @p TRUE adc samples are expanded to 32 bit to include
+ *          the channel index as bits 24-27
+ * @note    The default is @p FALSE.
+ */
+#if !defined(SAMV71_ADC_USE_CHIDX) || defined(__DOXYGEN__)
+#define SAMV71_ADC_USE_CHIDX                  FALSE
+#endif
 /**
  * @brief   ADC0 driver enable switch.
  * @details If set to @p TRUE the support for ADC0 is included.
@@ -103,6 +113,22 @@
 #if !defined(SAMV71_ADC_USE_ADC1) || defined(__DOXYGEN__)
 #define SAMV71_ADC_USE_ADC1                  FALSE
 #endif
+/**
+ * @brief   ADC0 dma priority
+ * @details 0 to 23, lower number is higher priority
+ * @note    The default is @p 0.
+ */
+#if !defined(SAMV71_ADC0_DMA_PRIO) || defined(__DOXYGEN__)
+#define SAMV71_ADC0_DMA_PRIO                  0
+#endif
+/**
+ * @brief   ADC1 dma priority
+ * @details 0 to 23, lower number is higher priority
+ * @note    The default is @p 0.
+ */
+#if !defined(SAMV71_ADC1_DMA_PRIO) || defined(__DOXYGEN__)
+#define SAMV71_ADC1_DMA_PRIO                  0
+#endif
 /** @} */
 
 /*===========================================================================*/
@@ -113,10 +139,19 @@
 /* Driver data structures and types.                                         */
 /*===========================================================================*/
 
+#if SAMV71_ADC_USE_CHIDX
+/**
+ * @brief   ADC sample data type.
+ *
+ * including the channel index in bits 24-27
+ */
+typedef uint32_t adcsample_t;
+#else
 /**
  * @brief   ADC sample data type.
  */
 typedef uint16_t adcsample_t;
+#endif
 
 /**
  * @brief   Channels number in a conversion group.
@@ -139,6 +174,7 @@ typedef uint32_t adcerror_t;
   Afec *device;                                                               \
   uint8_t current_channel;                                                    \
   uint8_t last_channel;                                                       \
+  uint32_t mr;                                                                \
   size_t current_pos;                                                         \
   const samv71_xdmac_channel_t* dma_channel;                                  \
   uint8_t dma_descriptors_buf[CACHE_ALIGNABLE_ALLOC_SIZE(sizeof(samv71_xdmac_linked_list_view_0_t)*2)];\
