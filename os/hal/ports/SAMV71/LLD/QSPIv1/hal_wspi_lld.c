@@ -24,6 +24,7 @@
  */
 
 #include "hal.h"
+#include <string.h>
 
 #if (HAL_USE_WSPI == TRUE) || defined(__DOXYGEN__)
 
@@ -67,8 +68,12 @@ static void wspi_lld_serve_interrupt(WSPIDriver *wspip) {
   /* Serial memory mode status bits: */
   if(sr & QSPI_SR_INSTRE) {
     if (wspip->state == WSPI_SEND || wspip->state == WSPI_RECEIVE) {
-      wspip->state = WSPI_COMPLETE;
-      _wspi_isr_code(wspip);
+      if((sr & QSPI_SR_CSS) == 0) {
+        //the CS did not go high. try to end the instruction again.
+        wspip->qspi->QSPI_CR = QSPI_CR_LASTXFER;
+      } else {
+        _wspi_isr_code(wspip);
+      }
     }
   }
 
@@ -85,6 +90,7 @@ static void wspi_lld_serve_interrupt(WSPIDriver *wspip) {
   /* There are no error status bits */
 }
 
+#if SAMV71_QSPI_USE_DMA
 /**
  * @brief   Shared service routine.
  *
@@ -98,7 +104,6 @@ static void wspi_lld_dma_func(void *param, uint32_t flags) {
 
   if(wspip->state == WSPI_SEND || wspip->state == WSPI_RECEIVE) {
     wspip->qspi->QSPI_CR = QSPI_CR_LASTXFER;
-    wspip->state = WSPI_COMPLETE;
     _wspi_isr_code(wspip);
   }
 
@@ -111,6 +116,7 @@ static void wspi_lld_dma_func(void *param, uint32_t flags) {
 #endif
 #endif
 }
+#endif
 
 /*===========================================================================*/
 /* Driver interrupt handlers.                                                */
@@ -122,7 +128,7 @@ static void wspi_lld_dma_func(void *param, uint32_t flags) {
  *
  * @isr
  */
-OSAL_IRQ_HANDLER(QSPI_HANDLER) {
+OSAL_IRQ_HANDLER(WSPI_QSPI_HANDLER) {
 
   OSAL_IRQ_PROLOGUE();
 
@@ -165,7 +171,7 @@ void wspi_lld_start(WSPIDriver *wspip) {
         // First enable the clock of the timer
         pmc_enable_periph_clk(ID_QSPI);
         // Enable the NVIC
-        nvicEnableVector(QSPI_NVIC_NUMBER, QSPI_NVIC_PRIORITY);
+        nvicEnableVector(WSPI_QSPI_NVIC_NUMBER, WSPI_QSPI_NVIC_PRIORITY);
     }
 #endif
   }
@@ -174,12 +180,14 @@ void wspi_lld_start(WSPIDriver *wspip) {
   wspip->qspi->QSPI_MR = QSPI_MR_SMM_MEMORY |
                          QSPI_MR_CSMODE_LASTXFER | // forced by hardware
                          wspip->config->mr;
-  uint32_t scbr = (QSPI_MAIN_CLK + wspip->config->speed)/wspip->config->speed - 1;
+  uint32_t scbr = (WSPI_QSPI_MAIN_CLK + wspip->config->speed)/wspip->config->speed - 1;
   wspip->qspi->QSPI_SCR = wspip->config->scr |
                           QSPI_SCR_SCBR(scbr);
 
+#if SAMV71_QSPI_USE_DMA
   if(!wspip->dma_channel)
-    wspip->dma_channel = xdmacChannelAllocI(wspi_lld_dma_func, wspip);
+    wspip->dma_channel = xdmacChannelAllocI(wspi_lld_dma_func, wspip, SAMV71_QSPI_DMA_PRIO);
+#endif
 
   wspip->qspi->QSPI_CR = QSPI_CR_QSPIEN;
 }
@@ -199,15 +207,17 @@ void wspi_lld_stop(WSPIDriver *wspip) {
     /* WSPI disable.*/
     wspip->qspi->QSPI_CR = QSPI_CR_QSPIDIS;
 
+#if SAMV71_QSPI_USE_DMA
     if(wspip->dma_channel) {
       xdmacChannelFreeI(wspip->dma_channel);
       wspip->dma_channel = NULL;
     }
+#endif
 
     /* Stopping involved clocks.*/
 #if SAMV71_WSPI_USE_QSPI
     if (&WSPID1 == wspip) {
-      nvicDisableVector(QSPI_NVIC_NUMBER);
+      nvicDisableVector(WSPI_QSPI_NVIC_NUMBER);
       pmc_disable_periph_clk(ID_QSPI);
     }
 #endif
@@ -284,9 +294,10 @@ void wspi_lld_command(WSPIDriver *wspip, const wspi_command_t *cmdp) {
 
   ifr = wspi_lld_setup_ifr(ifr, cmdp->dummy, cmdp->cfg);
 
-  wspip->qspi->QSPI_IFR = ifr;
-
   wspip->qspi->QSPI_IER = QSPI_IDR_INSTRE;
+
+  //with no data phase, writing ifr triggers the transmission, but only if there is no other transmission open
+  wspip->qspi->QSPI_IFR = ifr;
 }
 
 /**
@@ -321,6 +332,8 @@ void wspi_lld_send(WSPIDriver *wspip, const wspi_command_t *cmdp,
     ifr |= QSPI_IFR_TFRTYP_TRSFR_WRITE_MEMORY;
   }
 
+  wspip->qspi->QSPI_IER = QSPI_IDR_INSTRE;
+
   wspip->qspi->QSPI_IFR = ifr;
 
   //dummy read to "synchronize APB and AHB accesses"
@@ -336,8 +349,7 @@ void wspi_lld_send(WSPIDriver *wspip, const wspi_command_t *cmdp,
     }
   }
 
-  wspip->qspi->QSPI_IER = QSPI_IDR_INSTRE;
-
+#if SAMV71_QSPI_USE_DMA
   xdmacChannelSetInterruptCauses(wspip->dma_channel,
                                  XDMAC_CIE_LIE | XDMAC_CIE_RBIE |
                                  XDMAC_CIE_WBIE | XDMAC_CIE_ROIE);
@@ -356,6 +368,11 @@ void wspi_lld_send(WSPIDriver *wspip, const wspi_command_t *cmdp,
                                     txbuf,
                                     n);
   xdmacChannelSoftwareRequest(wspip->dma_channel);
+#else
+  memcpy((void*)addr, txbuf, n);
+  DCACHE_WRITE_BACK((void*)addr, n);
+  wspip->qspi->QSPI_CR = QSPI_CR_LASTXFER;
+#endif
 }
 
 /**
@@ -371,6 +388,18 @@ void wspi_lld_send(WSPIDriver *wspip, const wspi_command_t *cmdp,
  */
 void wspi_lld_receive(WSPIDriver *wspip, const wspi_command_t *cmdp,
                       size_t n, uint8_t *rxbuf) {
+
+  uint32_t addr = cmdp->addr;
+  if((cmdp->cfg & WSPI_CFG_ADDR_MODE_MASK) == WSPI_CFG_ADDR_MODE_NONE) {
+    //Just read/write anywhere in the QSPI address space.
+    addr = QSPIMEM_ADDR;
+  } else {
+    //write to memory, sequential only
+    if (addr < QSPIMEM_ADDR || addr >= QSPIMEM_ADDR + 0x20000000U) {
+      addr = (addr & 0x1fffffff) + QSPIMEM_ADDR;
+    }
+  }
+
   //if ((cmdp->cfg & WSPI_CFG_ADDR_MODE_MASK) != WSPI_CFG_ADDR_MODE_NONE &&
   //    (cmdp->cfg & WSPI_CFG_DATA_MODE_MASK) == WSPI_CFG_DATA_MODE_NONE)
   wspip->qspi->QSPI_IAR = cmdp->addr;
@@ -391,23 +420,14 @@ void wspi_lld_receive(WSPIDriver *wspip, const wspi_command_t *cmdp,
     ifr |= QSPI_IFR_TFRTYP_TRSFR_READ_MEMORY;
   }
 
+  wspip->qspi->QSPI_IER = QSPI_IDR_INSTRE;
+
   wspip->qspi->QSPI_IFR = ifr;
 
   //dummy read to "synchronize APB and AHB accesses"
-  ifr = wspip->qspi->QSPI_IFR;
-  uint32_t addr = cmdp->addr;
-  if((cmdp->cfg & WSPI_CFG_ADDR_MODE_MASK) == WSPI_CFG_ADDR_MODE_NONE) {
-    //Just read/write anywhere in the QSPI address space.
-    addr = QSPIMEM_ADDR;
-  } else {
-    //write to memory, sequential only
-    if (addr < QSPIMEM_ADDR || addr >= QSPIMEM_ADDR + 0x20000000U) {
-      addr = (addr & 0x1fffffff) + QSPIMEM_ADDR;
-    }
-  }
+  (void)wspip->qspi->QSPI_IFR;
 
-  wspip->qspi->QSPI_IER = QSPI_IDR_INSTRE;
-
+#if SAMV71_QSPI_USE_DMA
   xdmacChannelSetInterruptCauses(wspip->dma_channel,
                                  XDMAC_CIE_LIE | XDMAC_CIE_RBIE |
                                  XDMAC_CIE_WBIE | XDMAC_CIE_ROIE);
@@ -426,6 +446,19 @@ void wspi_lld_receive(WSPIDriver *wspip, const wspi_command_t *cmdp,
                                     addr,
                                     n);
   xdmacChannelSoftwareRequest(wspip->dma_channel);
+#else
+
+  DCACHE_INVALIDATE_FOR_READ((void*)addr, n);
+
+  memcpy(rxbuf, (void const *)addr, n);
+
+  __DSB();
+
+  //triggers INSTRE. If CSS has not been deasserted when the interrupt
+  //is handled, the handler will trigger LASTXFER again.
+  //this can happen when the transfer above happens too fast for the QSPI.
+  wspip->qspi->QSPI_CR = QSPI_CR_LASTXFER;
+#endif
 }
 
 #if (WSPI_SUPPORTS_MEMMAP == TRUE) || defined(__DOXYGEN__)

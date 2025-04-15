@@ -159,13 +159,13 @@
 #define WSPI_CFG_TYPE_MEMORY                (1LU << WSPI_LLD_CFG_TYPE_Pos)
 /** @} */
 
-#define QSPI_MAIN_CLK (SystemCoreClock / 2)
+#define WSPI_QSPI_MAIN_CLK (SystemCoreClock / 2)
 
-#define QSPI_NVIC_PRIORITY CORTEX_MIN_KERNEL_PRIORITY-1
+#define WSPI_QSPI_NVIC_PRIORITY CORTEX_MIN_KERNEL_PRIORITY-1
 
 #if defined(__SAMV71Q21B__)
-#define QSPI_NVIC_NUMBER QSPI_IRQn
-#define QSPI_HANDLER VectorEC
+#define WSPI_QSPI_NVIC_NUMBER QSPI_IRQn
+#define WSPI_QSPI_HANDLER VectorEC
 #endif
 
 
@@ -184,6 +184,24 @@
  */
 #if !defined(SAMV71_WSPI_USE_QSPI) || defined(__DOXYGEN__)
 #define SAMV71_WSPI_USE_QSPI             FALSE
+#endif
+/**
+ * @brief   Whether to use DMA to access memory
+ * @details When @p TRUE, the DMA is used to read/write the mapped memory.
+ *          This may stall the DMA engine while an access is going on.
+ *          When @p FALSE, the MCU is used to read/write the mapped memory.
+ * @note    The default is @p TRUE
+ */
+#if !defined(SAMV71_QSPI_USE_DMA) || defined(__DOXYGEN__)
+#define SAMV71_QSPI_USE_DMA              TRUE
+#endif
+/**
+ * @brief   QSPI dma priority
+ * @details 0 to 23, lower number is higher priority
+ * @note    The default is @p 16.
+ */
+#if !defined(SAMV71_QSPI_DMA_PRIO) || defined(__DOXYGEN__)
+#define SAMV71_QSPI_DMA_PRIO                  16
 #endif
 
 /** @} */
@@ -219,11 +237,16 @@
 /**
  * @brief   Low level fields of the WSPI driver structure.
  */
+#if SAMV71_QSPI_USE_DMA
 #define wspi_lld_driver_fields                                              \
   /* Pointer to the QSPIx registers block.*/                                \
   Qspi                          *qspi;                                      \
   const samv71_xdmac_channel_t* dma_channel
-
+#else
+#define wspi_lld_driver_fields                                              \
+  /* Pointer to the QSPIx registers block.*/                                \
+  Qspi                          *qspi;
+#endif
 
 /*===========================================================================*/
 /* External declarations.                                                    */
