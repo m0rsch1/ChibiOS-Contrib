@@ -237,6 +237,7 @@ static void parse_txevent_fifo_elem_to_packet(CANRxFrame *crfp,
     }
 }
 
+#if (SAMV71_CAN_USE_CAN0 == TRUE) || (SAMV71_CAN_USE_CAN1 == TRUE)
 static void can_lld_serve_interrupt0 ( CANDriver *canp )
 {
     //the interrupt gets recalled if still active, no need to loop here.
@@ -448,6 +449,7 @@ static void can_lld_serve_interrupt1 ( CANDriver *canp )
         }
     }
 }
+#endif
 
 static void can_lld_set_std_filter ( CANDriver *canp,  uint8_t filter, MCAN_Std_Filter_Element value )
 {
@@ -525,7 +527,7 @@ static void can_lld_set_ext_filter ( CANDriver *canp,  uint8_t filter, MCAN_Ext_
 /* Driver interrupt handlers.                                                */
 /*===========================================================================*/
 
-#if (SAMV71_CAN_USE_CAN0 == TRUE) || defined(__DOXYGEN__)
+#if (SAMV71_CAN_USE_CAN0 == TRUE)
 OSAL_IRQ_HANDLER(MCAN0_INT0_HANDLER)
 {
     OSAL_IRQ_PROLOGUE();
@@ -540,7 +542,7 @@ OSAL_IRQ_HANDLER(MCAN0_INT1_HANDLER)
     OSAL_IRQ_EPILOGUE();
 }
 #endif
-#if (SAMV71_CAN_USE_CAN1 == TRUE) || defined(__DOXYGEN__)
+#if (SAMV71_CAN_USE_CAN1 == TRUE)
 OSAL_IRQ_HANDLER(MCAN1_INT0_HANDLER)
 {
     OSAL_IRQ_PROLOGUE();
