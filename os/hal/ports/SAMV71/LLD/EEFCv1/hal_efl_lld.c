@@ -617,16 +617,13 @@ flash_error_t efl_lld_verify_erase(void *instance, flash_sector_t sector) {
  * read it, so all accesses to flash must be stopped and the data copied while
  * running from RAM.
  */
-static flash_error_t efl_lld_read_unique_identifier_helper(flash_offset_t offset,
-                              size_t n, uint8_t *pp) __attribute__((section(".ramtext"),flatten,noinline));
-static flash_error_t efl_lld_read_unique_identifier_helper(flash_offset_t offset,
+static __attribute__((section(".ramtext"), flatten, noinline))
+flash_error_t efl_lld_read_unique_identifier_helper(uint8_t *addr,
                               size_t n, uint8_t *pp) {
   //this cannot use any library functions and similar.
   REG_EFC_FCR = EEFC_FCR_FKEY_PASSWD | EEFC_FCR_FCMD_STUI;
-  while (REG_EFC_FSR & EEFC_FSR_FRDY) {
+  while ((REG_EFC_FSR & EEFC_FSR_FRDY) != 0) {
   }
-
-  uint8_t *addr = (uint8_t *)0x00400000+offset;
 
   DCACHE_INVALIDATE_FOR_READ(addr, n);
 
@@ -635,7 +632,7 @@ static flash_error_t efl_lld_read_unique_identifier_helper(flash_offset_t offset
   }
 
   REG_EFC_FCR = EEFC_FCR_FKEY_PASSWD | EEFC_FCR_FCMD_SPUI;
-  while (!(REG_EFC_FSR & EEFC_FSR_FRDY)) {
+  while ((REG_EFC_FSR & EEFC_FSR_FRDY) == 0) {
   }
 
   DCACHE_INVALIDATE_FOR_READ(addr, n);
@@ -675,9 +672,23 @@ flash_error_t flashReadUniqueIdentifier(void *instance, flash_offset_t offset,
   /* FLASH_READ state while the operation is performed.*/
   devp->state = FLASH_READ;
 
-  chSysLock();
-  err = efl_lld_read_unique_identifier_helper(offset, n, pp);
-  chSysUnlock();
+  uint8_t *addr = (uint8_t *)0x00400000+offset;
+
+  /* Fill the associated memory with zeros before potentially accessing
+   * invalid memory while the fault handlers cannot work because the main flash
+   * is not mapped. This also helps with any magic done with the MPU that
+   * would have made the destination memory unavailable until accessed.
+   */
+  for(unsigned int count = 0; count < n; count++) {
+    pp[count] = 0;
+  }
+
+  /* chSysDisable disables all interrupts(except the Faults), chSysLock only
+   * disables the ChibiOS kernels interrupts
+   */
+  chSysDisable();
+  err = efl_lld_read_unique_identifier_helper(addr, n, pp);
+  chSysEnable();
 
   /* Ready state again.*/
   devp->state = FLASH_READY;
